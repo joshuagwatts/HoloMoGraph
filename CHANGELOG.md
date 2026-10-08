@@ -56,3 +56,12 @@ Live-update architecture (no more rebuilds):
 - Effector param changes sync live to node inputs (no rebuild). Structural
   changes (add/remove/reorder effectors) still rebuild.
 - Blender 5.2 modifier input API fix (mod.properties.inputs.<id>.value).
+
+## v1.2.0 — 2026-10-08
+
+C4D-style workflow:
+- ONE "Add HoloCloner" button (was six per-mode buttons). Add it, parent
+  objects under it, change mode in the Modifiers tab.
+- Parenting is LIVE: drag an object under the cloner and it clones instantly —
+  no more manual Rebuild button. A depsgraph handler watches for hierarchy
+  changes and rebuilds automatically.

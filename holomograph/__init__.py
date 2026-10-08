@@ -10,7 +10,7 @@ Everything is built on Geometry Nodes, so clones are true instances.
 bl_info = {
     "name": "HoloMoGraph",
     "author": "Holowatts",
-    "version": (1, 1, 1),
+    "version": (1, 2, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > HoloMoGraph",
     "description": "C4D-style MoGraph: Cloner, Effectors, Falloffs, MoText, "
@@ -24,14 +24,18 @@ from .ui import panels
 
 
 def register():
+    from .core import handlers as _handlers
     props.register()
     cloner_ops.register()
     tools_ops.register()
     mocap_ops.register()
     panels.register()
+    _handlers.register()
 
 
 def unregister():
+    from .core import handlers as _handlers
+    _handlers.unregister()
     panels.unregister()
     mocap_ops.unregister()
     tools_ops.unregister()

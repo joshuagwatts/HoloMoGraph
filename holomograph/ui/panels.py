@@ -14,14 +14,10 @@ class HMG_PT_main(bpy.types.Panel):
         layout = self.layout
         col = layout.column(align=True)
         col.label(text="Cloners")
-        row = col.row(align=True)
-        for mode, label in (("GRID", "Grid"), ("LINEAR", "Linear"), ("RADIAL", "Radial")):
-            op = row.operator("hmg.add_cloner", text=label)
-            op.mode = mode
-        row = col.row(align=True)
-        for mode, label in (("HONEYCOMB", "Honey"), ("OBJECT", "Object"), ("SPLINE", "Spline")):
-            op = row.operator("hmg.add_cloner", text=label)
-            op.mode = mode
+        # One HoloCloner — C4D-style. Add it, parent objects under it, change
+        # the mode in the Modifiers tab. No per-mode add buttons.
+        op = col.operator("hmg.add_cloner", text="Add HoloCloner", icon="EMPTY_DATA")
+        op.mode = "LINEAR"
         col.separator()
         col.label(text="Tools")
         col.operator("hmg.motext", text="MoText")
