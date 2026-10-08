@@ -74,28 +74,53 @@ def _init_attrs(tree, geo, x, roff=None, smul=None):
 
 
 def _step_transforms(tree, gin, x):
-    """Per-step euler rotation * index and scale-step ^ index."""
+    """Per-step euler rotation * index and scale-step ^ index (C4D-style).
+
+    C4D's scale step is exponential: clone i has scale = step ^ i.
+    Negative steps alternate sign (mirror): (-2)^0=1, (-2)^1=-2, (-2)^2=4.
+    Zero step: 0^0=1, 0^n=0 for n>0 (first clone normal, rest collapsed).
+    """
     idx = add_node(tree, "GeometryNodeInputIndex", (x, -750))
     idxf = math(tree, "ADD", idx.outputs["Index"], value(tree, 0.0).outputs[0],
                 location=(x + 150, -750))
     roff = vmath(tree, "SCALE", gin.outputs["RStep"], None, None, idxf.outputs[0],
                  location=(x + 300, -750)).outputs["Vector"]
     s = separate_xyz(tree, gin.outputs["SStep"], (x + 150, -900))
+
+    def _pow_axis(axis_out, loc):
+        # magnitude = |base| ^ index
+        mag = math(tree, "POWER",
+                   math(tree, "ABSOLUTE", axis_out,
+                        location=(loc[0], loc[1] - 50)).outputs[0],
+                   idxf.outputs[0], location=loc).outputs[0]
+        # sign: 1 if base >= 0; else (-1)^index (alternates for mirrors)
+        is_neg = compare(tree, axis_out,
+                         value(tree, 0.0).outputs[0],
+                         operation="LESS_THAN",
+                         location=(loc[0], loc[1] - 150)).outputs[0]
+        is_odd = compare(tree,
+                         math(tree, "MODULO", idxf.outputs[0],
+                              value(tree, 2.0).outputs[0],
+                              location=(loc[0], loc[1] - 250)).outputs[0],
+                         value(tree, 0.5).outputs[0],
+                         operation="GREATER_THAN",
+                         location=(loc[0], loc[1] - 350)).outputs[0]
+        neg_sign = switch(tree, is_odd,
+                          value(tree, 1.0).outputs[0],
+                          value(tree, -1.0).outputs[0],
+                          location=(loc[0], loc[1] - 450)).outputs[0]
+        sign = switch(tree, is_neg,
+                      value(tree, 1.0).outputs[0],
+                      neg_sign,
+                      location=(loc[0], loc[1] - 550)).outputs[0]
+        return math(tree, "MULTIPLY", mag, sign,
+                    location=(loc[0], loc[1] - 650)).outputs[0]
+
     pw = combine_xyz(tree,
-                     math(tree, "POWER",
-                          math(tree, "MAXIMUM", s.outputs["X"],
-                               value(tree, 1e-4).outputs[0]).outputs[0],
-                          idxf.outputs[0]).outputs[0],
-                     math(tree, "POWER",
-                          math(tree, "MAXIMUM", s.outputs["Y"],
-                               value(tree, 1e-4).outputs[0]).outputs[0],
-                          idxf.outputs[0]).outputs[0],
-                     math(tree, "POWER",
-                          math(tree, "MAXIMUM", s.outputs["Z"],
-                               value(tree, 1e-4).outputs[0]).outputs[0],
-                          idxf.outputs[0],
-                          location=(x + 300, -900)).outputs[0],
-                     (x + 300, -900)).outputs["Vector"]
+                     _pow_axis(s.outputs["X"], (x + 300, -900)),
+                     _pow_axis(s.outputs["Y"], (x + 450, -900)),
+                     _pow_axis(s.outputs["Z"], (x + 600, -900)),
+                     location=(x + 750, -900)).outputs["Vector"]
     return roff, pw
 
 

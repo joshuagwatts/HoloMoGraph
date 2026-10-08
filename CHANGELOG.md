@@ -73,3 +73,10 @@ Bug fixes:
   apply uniformly instead of a confusing gradient. C4D-style.
 - Linear cloner mode now uses PStep (per-step position) — was using a separate
   "Offset" and PStep did nothing. PStep defaults to (2,0,0).
+
+## v1.2.2 — 2026-10-08
+
+C4D-matched step transforms:
+- Scale step is now true exponential with proper negative/zero handling:
+  (-1)^i alternates mirror, 0^0=1, 0^n=0. No more clamping to positive.
+- Matches C4D's per-clone transform behavior precisely.
