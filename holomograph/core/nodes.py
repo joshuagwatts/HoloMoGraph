@@ -205,9 +205,15 @@ def boolean_math(tree, operation, a, b, location=(0, 0)):
     return n
 
 
-def index_switch(tree, index_sock, values, location=(0, 0)):
+def index_switch(tree, index_sock, values, location=(0, 0), data_type="FLOAT"):
     """Index Switch node with `values` list of output sockets."""
     n = add_node(tree, "GeometryNodeIndexSwitch", location)
+    # Blender 5.0 defaults items to GEOMETRY; set the data type explicitly
+    # (5.2 infers from links, but explicit works on both).
+    try:
+        n.data_type = data_type
+    except Exception:
+        pass
     try:
         n.index_switch_items.clear()
         for _ in values:

@@ -24,7 +24,7 @@ def _center_piece_on_pivot(piece, pivot: Vector):
 
 def _pieces_to_cloner(context, pieces, name: str):
     """Shared MoText/Fracture finish: collection + pivot points + cloner."""
-    from ..core.cloner import build_chain
+    from ..core.cloner import build_chain, new_cloner_object
     pieces = sorted(pieces, key=lambda o: (_pivot_of(o).x, _pivot_of(o).y))
     col = bpy.data.collections.new(f"HMG {name} Pieces")
     context.scene.collection.children.link(col)
@@ -42,10 +42,7 @@ def _pieces_to_cloner(context, pieces, name: str):
     pobj = bpy.data.objects.new(f"HMG {name} Pivots", mesh)
     context.scene.collection.objects.link(pobj)
 
-    bpy.ops.object.empty_add(type="PLAIN_AXES")
-    cl = context.active_object
-    cl.name = f"HMG {name} Cloner"
-    cl.hmg_type = "CLONER"
+    cl = new_cloner_object(context, f"HMG {name} Cloner")
     cp = cl.hmg_cloner
     cp.mode = "OBJECT"
     cp.dist_object = pobj
@@ -264,7 +261,7 @@ class HMG_OT_sound_bake(bpy.types.Operator):
         var.type = "SINGLE_PROP"
         var.targets[0].id = eff
         var.targets[0].data_path = f'["{prop}"]'
-        from ..core.cloner import build_chain
+        from ..core.cloner import build_chain, new_cloner_object
         par = eff.parent
         while par is not None and par.hmg_type != "CLONER":
             par = par.parent

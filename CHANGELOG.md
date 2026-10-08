@@ -25,3 +25,13 @@ First release. The whole thing, done right.
 - Crowd builder with staggered time offsets
 
 **Verified** — 23/23 headless checks on Blender 5.2.2 LTS.
+
+## v1.0.1 — 2026-10-08
+
+Blender 5.0 compatibility fixes (reported by Joshua — thank you for the screenshot):
+- Cloner object is now a single-vertex mesh instead of an empty: Blender 5.0
+  cannot put modifiers on empties at all (`modifiers.new()` returns None).
+  The modifier output replaces the vertex, so it never renders.
+- Index Switch node: set `data_type` explicitly — 5.0 defaults items to
+  GEOMETRY, which broke all falloff shapes (constant 0.5 weights).
+- `ensure_modifier` now raises a clear error instead of `AttributeError: NoneType`.

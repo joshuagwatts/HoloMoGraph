@@ -776,10 +776,33 @@ def build_chain(cloner_obj):
     return tree
 
 
+def new_cloner_object(context, name):
+    """Create the cloner object. A single-vertex mesh (not an empty) because
+    Blender 5.0 cannot put modifiers on empties. The modifier output replaces
+    the vertex entirely, so it never renders."""
+    me = bpy.data.meshes.new(f"{name} Mesh")
+    me.from_pydata([(0.0, 0.0, 0.0)], [], [])
+    me.update()
+    obj = bpy.data.objects.new(name, me)
+    context.scene.collection.objects.link(obj)
+    context.view_layer.objects.active = obj
+    obj.select_set(True)
+    obj.hmg_type = "CLONER"
+    return obj
+
+
 def ensure_modifier(cloner_obj, tree=None):
     mod = cloner_obj.modifiers.get("HoloMoGraph")
     if mod is None:
-        mod = cloner_obj.modifiers.new("HoloMoGraph", "NODES")
+        try:
+            mod = cloner_obj.modifiers.new("HoloMoGraph", "NODES")
+        except Exception:
+            mod = None
+    if mod is None:
+        raise RuntimeError(
+            f"HoloMoGraph: cannot add a Geometry Nodes modifier to "
+            f"'{cloner_obj.name}' ({cloner_obj.type}). "
+            f"Blender 5.0 cannot put modifiers on empties — use a mesh object.")
     if tree is None:
         tree = ng_get(chain_group_name(cloner_obj))
     if tree is not None:

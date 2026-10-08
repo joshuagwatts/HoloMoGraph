@@ -26,11 +26,8 @@ class HMG_OT_add_cloner(bpy.types.Operator):
     mode: bpy.props.EnumProperty(name="Mode", items=CLONER_MODES, default="GRID")
 
     def execute(self, context):
-        from ..core.cloner import build_chain
-        bpy.ops.object.empty_add(type="PLAIN_AXES")
-        obj = context.active_object
-        obj.name = "HMG Cloner"
-        obj.hmg_type = "CLONER"
+        from ..core.cloner import build_chain, new_cloner_object
+        obj = new_cloner_object(context, "HMG Cloner")
         obj.hmg_cloner.mode = self.mode
         build_chain(obj)
         return {"FINISHED"}
