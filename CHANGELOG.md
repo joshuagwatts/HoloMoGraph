@@ -44,3 +44,15 @@ C4D-style hierarchy nesting:
   arrangement. The sidebar shows which cloners are nested and offers a rebuild.
 - Explicit Instance Object still wins if both are set.
 - Build-time cycle detection covers hierarchy + instance_object chains.
+
+## v1.1.0 — 2026-10-08
+
+Live-update architecture (no more rebuilds):
+- Cloner is now a visible wireframe octahedron gizmo (selectable in viewport).
+- All 6 modes live in one static node tree with an Index Switch — changing the
+  Mode is a live input change, no rebuild.
+- Every cloner param is a modifier input (Properties > Modifiers tab) — tweak
+  live, C4D-style. Sidebar props sync to the modifier.
+- Effector param changes sync live to node inputs (no rebuild). Structural
+  changes (add/remove/reorder effectors) still rebuild.
+- Blender 5.2 modifier input API fix (mod.properties.inputs.<id>.value).

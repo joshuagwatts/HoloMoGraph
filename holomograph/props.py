@@ -9,11 +9,11 @@ import bpy
 
 
 def _refresh_cloner_of(prop_self):
-    """Rebuild the owning cloner chain when a prop changes."""
+    """Sync the owning cloner chain inputs when a prop changes (live, no rebuild)."""
     try:
-        from .core.cloner import refresh_from_any
+        from .core.cloner import sync_from_any
         obj = prop_self.id_data
-        refresh_from_any(obj)
+        sync_from_any(obj)
     except Exception:
         pass
 

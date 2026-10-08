@@ -18,7 +18,7 @@ import bpy
 from .nodes import (
     ng_new, ng_get, add_node, link, group_node, iface_in, iface_out, io_nodes,
     math, vmath, combine_xyz, separate_xyz, compare, switch, value,
-    store_attr, named_attr, object_info, euler_to_rotation,
+    store_attr, named_attr, object_info, euler_to_rotation, index_switch,
 )
 from . import effectors as FX
 
@@ -548,8 +548,55 @@ def _check_cycle(cloner_obj):
         cur = _nested_child(cur) if cur.hmg_type == "CLONER" else None
 
 
+def _define_master_inputs(tree, cp):
+    """Define all cloner params as master group inputs (modifier tab, live)."""
+    from .nodes import iface_in as _ii
+    _ii(tree, "Mode", "INT", default={"LINEAR": 0, "RADIAL": 1, "GRID": 2,
+                                      "HONEYCOMB": 3, "OBJECT": 4,
+                                      "SPLINE": 5}[cp.mode],
+        min_value=0, max_value=5)
+    _ii(tree, "Count", "INT", default=cp.count, min_value=1)
+    _ii(tree, "PStep", "VECTOR", default=tuple(cp.step_position))
+    _ii(tree, "RStep", "VECTOR", default=tuple(cp.step_rotation))
+    _ii(tree, "SStep", "VECTOR", default=tuple(cp.step_scale))
+    _ii(tree, "Offset", "VECTOR", default=tuple(cp.lin_offset))
+    _ii(tree, "Radius", "FLOAT", default=cp.radius, min_value=0.01)
+    _ii(tree, "Arc", "FLOAT", default=cp.arc)
+    _ii(tree, "Plane", "INT", default={"XY": 0, "XZ": 1, "YZ": 2}[cp.plane],
+        min_value=0, max_value=2)
+    _ii(tree, "Count X", "INT", default=cp.count_x, min_value=1)
+    _ii(tree, "Count Y", "INT", default=cp.count_y, min_value=1)
+    _ii(tree, "Count Z", "INT", default=cp.count_z, min_value=1)
+    _ii(tree, "Spacing", "VECTOR", default=tuple(cp.spacing))
+    _ii(tree, "Columns", "INT", default=cp.count_x, min_value=1)
+    _ii(tree, "Rows", "INT", default=cp.count_y, min_value=1)
+    _ii(tree, "Target", "OBJECT", default=cp.dist_object)
+    _ii(tree, "Dist Mode", "INT", default={"VERTEX": 0, "EDGE": 1, "FACE": 2,
+                                           "SURFACE": 3}[cp.dist_mode],
+        min_value=0, max_value=3)
+    _ii(tree, "Density", "FLOAT", default=cp.density, min_value=0.01)
+    _ii(tree, "Seed", "INT", default=cp.seed)
+    _ii(tree, "Spline", "OBJECT", default=cp.spline_object)
+    _ii(tree, "Align", "BOOLEAN", default=cp.align_to_spline)
+
+
+def _wire_mode_inputs(tree, mg, master_gin):
+    """Wire master group inputs to a mode group node's matching inputs."""
+    for inp in mg.inputs:
+        try:
+            src = master_gin.outputs[inp.name]
+            tree.links.new(src, inp)
+        except Exception:
+            pass
+
+
 def _append_pipeline(tree, cloner_obj, x):
     """Append mode points + effector chain for cloner_obj into tree.
+
+    v2: All 6 mode generators are instantiated and an Index Switch on the
+    "Mode" input selects the active one — changing modes is a live input
+    change, no rebuild. All mode params are master inputs (visible in the
+    modifier tab).
 
     Returns (geo_socket, count_socket, new_x, drv_items).
 
@@ -560,12 +607,36 @@ def _append_pipeline(tree, cloner_obj, x):
     _check_cycle(cloner_obj)
     cp = cloner_obj.hmg_cloner
     ensure_mode_groups()
-    gname, _ = MODE_BUILDERS[cp.mode]
-    mg = group_node(tree, ng_get(gname), (x, 0), f"Mode: {cp.mode}")
-    x += 260
-    _set_mode_params(mg, cp, cloner_obj)
-    geo = mg.outputs["Geometry"]
-    count = mg.outputs["Count"]
+
+    # Define all master inputs (modifier tab, live updates).
+    _define_master_inputs(tree, cp)
+
+    # Find the Group Input node for wiring.
+    gin = None
+    for n in tree.nodes:
+        if n.bl_idname == "NodeGroupInput":
+            gin = n
+            break
+
+    # Instantiate all 6 mode groups; wire master inputs through; select via switch.
+    # Changing "Mode" is now a live input change — no rebuild.
+    mode_geos = []
+    mode_counts = []
+    my = x
+    for mode_key in ("LINEAR", "RADIAL", "GRID", "HONEYCOMB", "OBJECT", "SPLINE"):
+        gname, _ = MODE_BUILDERS[mode_key]
+        mg = group_node(tree, ng_get(gname), (x, my), f"Mode: {mode_key}")
+        my -= 320
+        _wire_mode_inputs(tree, mg, gin)
+        mode_geos.append(mg.outputs["Geometry"])
+        mode_counts.append(mg.outputs["Count"])
+    sw_geo = index_switch(tree, gin.outputs["Mode"], mode_geos,
+                          location=(x + 300, 0), data_type="GEOMETRY")
+    sw_cnt = index_switch(tree, gin.outputs["Mode"], mode_counts,
+                          location=(x + 300, -200))
+    geo = sw_geo.outputs[0]
+    count = sw_cnt.outputs[0]
+    x += 560
 
     drv_items = []
     for eff in _effectors_of(cloner_obj):
@@ -797,13 +868,19 @@ def build_chain(cloner_obj):
 
 
 def new_cloner_object(context, name):
-    """Create the cloner object. A single-vertex mesh (not an empty) because
-    Blender 5.0 cannot put modifiers on empties. The modifier output replaces
-    the vertex entirely, so it never renders."""
+    """Create the cloner object. A wireframe octahedron mesh (not an empty)
+    because Blender 5.0 cannot put modifiers on empties. The modifier output
+    replaces the mesh entirely, so the gizmo never renders — it's just a
+    visible, selectable handle in the viewport, like a C4D cloner icon."""
     me = bpy.data.meshes.new(f"{name} Mesh")
-    me.from_pydata([(0.0, 0.0, 0.0)], [], [])
+    # Octahedron: 6 verts, 8 triangular faces (wireframe gizmo)
+    verts = [(0, 0, 1), (0, 0, -1), (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0)]
+    faces = [(0, 2, 4), (0, 4, 3), (0, 3, 5), (0, 5, 2),
+             (1, 4, 2), (1, 3, 4), (1, 5, 3), (1, 2, 5)]
+    me.from_pydata(verts, [], faces)
     me.update()
     obj = bpy.data.objects.new(name, me)
+    obj.display_type = "WIRE"
     context.scene.collection.objects.link(obj)
     context.view_layer.objects.active = obj
     obj.select_set(True)
@@ -828,6 +905,113 @@ def ensure_modifier(cloner_obj, tree=None):
     if tree is not None:
         mod.node_group = tree
     return mod
+
+
+def _mod_input_id(tree, name):
+    """Get the modifier input identifier for a named group input."""
+    try:
+        for item in tree.interface.items_tree:
+            if getattr(item, "name", "") == name:
+                return item.identifier
+    except Exception:
+        pass
+    return None
+
+
+def _set_mod_input(mod, identifier, value):
+    """Version-gated modifier input setter (5.2+ uses RNA, older uses ID props)."""
+    try:
+        if bpy.app.version >= (5, 2, 0):
+            entry = getattr(mod.properties.inputs, identifier)
+            entry.type = "VALUE"
+            entry.value = value
+        else:
+            mod[identifier] = value
+        mod.id_data.update_tag()
+    except Exception:
+        pass
+
+
+def sync_cloner_inputs(cloner_obj):
+    """Sync cloner props to master group modifier inputs (live, no rebuild)."""
+    mod = cloner_obj.modifiers.get("HoloMoGraph")
+    if mod is None or mod.node_group is None:
+        return
+    tree = mod.node_group
+    cp = cloner_obj.hmg_cloner
+    vals = {
+        "Mode": {"LINEAR": 0, "RADIAL": 1, "GRID": 2,
+                 "HONEYCOMB": 3, "OBJECT": 4, "SPLINE": 5}[cp.mode],
+        "Count": cp.count,
+        "PStep": tuple(cp.step_position),
+        "RStep": tuple(cp.step_rotation),
+        "SStep": tuple(cp.step_scale),
+        "Offset": tuple(cp.lin_offset),
+        "Radius": cp.radius,
+        "Arc": cp.arc,
+        "Plane": {"XY": 0, "XZ": 1, "YZ": 2}[cp.plane],
+        "Count X": cp.count_x, "Count Y": cp.count_y, "Count Z": cp.count_z,
+        "Spacing": tuple(cp.spacing),
+        "Columns": cp.count_x, "Rows": cp.count_y,
+        "Target": cp.dist_object,
+        "Dist Mode": {"VERTEX": 0, "EDGE": 1, "FACE": 2, "SURFACE": 3}[cp.dist_mode],
+        "Density": cp.density, "Seed": cp.seed,
+        "Spline": cp.spline_object, "Align": cp.align_to_spline,
+    }
+    for name, val in vals.items():
+        ident = _mod_input_id(tree, name)
+        if ident is None:
+            continue
+        _set_mod_input(mod, ident, val)
+
+
+def sync_from_any(obj):
+    """Sync inputs (live) for a prop change on obj — no structural rebuild."""
+    if obj is None:
+        return
+    t = getattr(obj, "hmg_type", "")
+    if t == "CLONER":
+        # If master doesn't exist yet, build it.
+        mod = obj.modifiers.get("HoloMoGraph")
+        if mod is None or mod.node_group is None:
+            build_chain(obj)
+        else:
+            sync_cloner_inputs(obj)
+    elif t in ("EFFECTOR", "FALLOFF"):
+        # Effector param change: sync the FX node inputs in parent chain.
+        # (Structural add/remove still uses build_chain via ops.)
+        parent = obj.parent
+        if t == "FALLOFF":
+            parent = parent.parent if parent else None
+        while parent is not None and getattr(parent, "hmg_type", "") != "CLONER":
+            parent = parent.parent
+        if parent is not None:
+            _sync_effector_node(parent, obj if t == "EFFECTOR" else obj.parent)
+
+
+def _sync_effector_node(cloner_obj, eff_obj):
+    """Copy effector props to its node inputs in the cloner master (live)."""
+    mod = cloner_obj.modifiers.get("HoloMoGraph")
+    if mod is None or mod.node_group is None:
+        return
+    tree = mod.node_group
+    ep = eff_obj.hmg_effector
+    # Find the FX group node for this effector
+    target = None
+    for node in tree.nodes:
+        if node.bl_idname == "GeometryNodeGroup" and node.node_tree:
+            if sanitize(eff_obj.name) in node.node_tree.name:
+                target = node
+                break
+    if target is None:
+        return
+    # Reuse the same param-setting logic as the initial build.
+    fo = _falloff_of(eff_obj)
+    _set_fx_params(target, eff_obj, fo)
+    try:
+        target.inputs["Strength"].default_value = ep.strength
+    except Exception:
+        pass
 
 
 def refresh_from_any(obj):
