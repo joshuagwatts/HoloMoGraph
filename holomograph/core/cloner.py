@@ -537,6 +537,23 @@ def _nested_child(cloner_obj):
     return None
 
 
+def _hierarchy_instance_source(cloner_obj):
+    """C4D-style: a regular object parented under the cloner becomes the
+    object being cloned. Explicit instance_object wins; child cloners are
+    handled by _nested_child; effectors/falloffs are skipped."""
+    inst = cloner_obj.hmg_cloner.instance_object
+    if inst is not None:
+        return inst
+    nested = _nested_child(cloner_obj)
+    if nested is not None:
+        return nested
+    for child in cloner_obj.children:
+        t = getattr(child, "hmg_type", "")
+        if t not in ("CLONER", "EFFECTOR", "FALLOFF"):
+            return child
+    return None
+
+
 def _check_cycle(cloner_obj):
     """C4D forbids cloner cycles (A instances B instances A); catch at build."""
     seen = set()
@@ -806,10 +823,7 @@ def build_chain(cloner_obj):
     geo = dg.outputs["Geometry"]
     x += 450
 
-    instance_obj = _nested_child(cloner_obj)
-    if instance_obj is None:
-        # fall back to a plain instance object (non-cloner) if set
-        instance_obj = cloner_obj.hmg_cloner.instance_object
+    instance_obj = _hierarchy_instance_source(cloner_obj)
     if instance_obj is not None:
         # Make sure the nested cloner's own chain is built.
         if getattr(instance_obj, "hmg_type", "") == "CLONER":

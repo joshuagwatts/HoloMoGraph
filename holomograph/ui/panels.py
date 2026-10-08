@@ -85,11 +85,16 @@ class HMG_PT_cloner(bpy.types.Panel):
             layout.prop(cp, "instance_index_offset")
         # C4D-style hierarchy nesting hint
         nested = [c for c in obj.children if getattr(c, "hmg_type", "") == "CLONER"]
+        src_objs = [c for c in obj.children
+                    if getattr(c, "hmg_type", "") not in ("CLONER", "EFFECTOR", "FALLOFF")]
         if nested:
             layout.label(text=f"Nesting: {', '.join(c.name for c in nested)}",
                          icon="LINKED")
+        elif src_objs:
+            layout.label(text=f"Cloning: {', '.join(c.name for c in src_objs)}",
+                         icon="OBJECT_DATA")
         else:
-            layout.label(text="Tip: parent a cloner under this one (C4D-style)",
+            layout.label(text="Tip: parent an object under the cloner (C4D-style)",
                          icon="INFO")
         layout.separator()
         layout.label(text="Effectors")
