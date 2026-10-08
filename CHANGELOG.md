@@ -35,3 +35,12 @@ Blender 5.0 compatibility fixes (reported by Joshua — thank you for the screen
 - Index Switch node: set `data_type` explicitly — 5.0 defaults items to
   GEOMETRY, which broke all falloff shapes (constant 0.5 weights).
 - `ensure_modifier` now raises a clear error instead of `AttributeError: NoneType`.
+
+## v1.0.2 — 2026-10-08
+
+C4D-style hierarchy nesting:
+- Parenting a cloner under another cloner (Blender object hierarchy, like dragging
+  in C4D's Object Manager) now nests it — the parent clones the child's full
+  arrangement. The sidebar shows which cloners are nested and offers a rebuild.
+- Explicit Instance Object still wins if both are set.
+- Build-time cycle detection covers hierarchy + instance_object chains.

@@ -525,6 +525,18 @@ def _mirror_drivers(chain_tree, items):
                 pass
 
 
+def _nested_child(cloner_obj):
+    """The cloner nested under this one: explicit instance_object wins,
+    otherwise the first parented child cloner (C4D-style hierarchy)."""
+    inst = cloner_obj.hmg_cloner.instance_object
+    if inst is not None and getattr(inst, "hmg_type", "") == "CLONER":
+        return inst
+    for child in cloner_obj.children:
+        if getattr(child, "hmg_type", "") == "CLONER":
+            return child
+    return None
+
+
 def _check_cycle(cloner_obj):
     """C4D forbids cloner cycles (A instances B instances A); catch at build."""
     seen = set()
@@ -533,8 +545,7 @@ def _check_cycle(cloner_obj):
         if cur in seen:
             raise RuntimeError("HoloMoGraph: cloner nesting cycle detected")
         seen.add(cur)
-        nxt = cur.hmg_cloner.instance_object if cur.hmg_type == "CLONER" else None
-        cur = nxt if (nxt is not None and nxt.hmg_type == "CLONER") else None
+        cur = _nested_child(cur) if cur.hmg_type == "CLONER" else None
 
 
 def _append_pipeline(tree, cloner_obj, x):
@@ -724,8 +735,17 @@ def build_chain(cloner_obj):
     geo = dg.outputs["Geometry"]
     x += 450
 
-    instance_obj = cloner_obj.hmg_cloner.instance_object
+    instance_obj = _nested_child(cloner_obj)
+    if instance_obj is None:
+        # fall back to a plain instance object (non-cloner) if set
+        instance_obj = cloner_obj.hmg_cloner.instance_object
     if instance_obj is not None:
+        # Make sure the nested cloner's own chain is built.
+        if getattr(instance_obj, "hmg_type", "") == "CLONER":
+            try:
+                build_chain(instance_obj)
+            except Exception:
+                pass
         # Nested cloner: instance the whole child cloner object (its evaluated
         # instances) at each of this cloner's points - C4D-style nesting.
         iinfo = object_info(tree, instance_obj, (x, 200), as_instance=True,
