@@ -108,6 +108,15 @@ class HMG_ClonerProps(bpy.types.PropertyGroup):
                                              update=_upd)
     align_to_spline: bpy.props.BoolProperty(name="Align to Spline", default=True,
                                             update=_upd)
+    # Nested cloner behavior: when this cloner is nested inside another,
+    # "Grouped" (default, C4D-style) instances the whole arrangement as one unit.
+    # Parent effectors transform each nested instance as a whole.
+    group_nested: bpy.props.BoolProperty(
+        name="Group Nested Cloner", default=True, update=_upd,
+        description="When nested: ON treats the whole arrangement as one grouped "
+                    "unit (C4D-style, parent effectors transform each instance as "
+                    "a whole). OFF (flattened, coming soon) will let parent "
+                    "effectors affect each nested clone individually.")
     # per-step transforms (the C4D P/R/S per clone step)
     step_position: bpy.props.FloatVectorProperty(name="P", default=(2.0, 0, 0),
                                                  subtype="TRANSLATION", update=_upd_vec)

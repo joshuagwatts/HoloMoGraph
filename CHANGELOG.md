@@ -80,3 +80,12 @@ C4D-matched step transforms:
 - Scale step is now true exponential with proper negative/zero handling:
   (-1)^i alternates mirror, 0^0=1, 0^n=0. No more clamping to positive.
 - Matches C4D's per-clone transform behavior precisely.
+
+## v1.2.3 — 2026-10-08
+
+Nested cloner control:
+- Added "Group Nested Cloner" toggle (per nested cloner, in parent's panel).
+- ON (default, C4D-style): parent effectors treat the nested arrangement as
+  one grouped unit, transforming each instance as a whole.
+- OFF (flattened, coming soon): will let parent effectors affect each nested
+  clone individually.

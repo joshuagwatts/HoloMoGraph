@@ -84,6 +84,10 @@ class HMG_PT_cloner(bpy.types.Panel):
         if nested:
             layout.label(text=f"Nesting: {', '.join(c.name for c in nested)}",
                          icon="LINKED")
+            for nc in nested:
+                # Grouped vs flattened toggle for each nested cloner
+                layout.prop(nc.hmg_cloner, "group_nested",
+                            text=f"Group '{nc.name}'")
         elif src_objs:
             layout.label(text=f"Cloning: {', '.join(c.name for c in src_objs)}",
                          icon="OBJECT_DATA")

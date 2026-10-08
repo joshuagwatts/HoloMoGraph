@@ -643,6 +643,9 @@ def _append_pipeline(tree, cloner_obj, x):
     Nested cloners (C4D-style cloner-in-cloner): the parent generates its own
     points and instances the *whole child cloner object* (Object Info as
     instance), so each parent clone carries the child's full arrangement.
+    Set child.group_nested=False to flatten (parent effectors affect each
+    nested clone individually).
+
     """
     _check_cycle(cloner_obj)
     cp = cloner_obj.hmg_cloner
@@ -856,6 +859,8 @@ def build_chain(cloner_obj):
                 pass
         # Nested cloner: instance the whole child cloner object (its evaluated
         # instances) at each of this cloner's points - C4D-style nesting.
+        # The child is treated as one grouped unit; parent effectors transform
+        # each child instance as a whole. (Flattened mode coming soon.)
         iinfo = object_info(tree, instance_obj, (x, 200), as_instance=True,
                             transform_space="ORIGINAL")
         roff = named_attr(tree, A_ROFF, "FLOAT_VECTOR", (x, 0))
