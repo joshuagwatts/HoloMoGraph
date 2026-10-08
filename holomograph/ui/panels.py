@@ -45,9 +45,7 @@ class HMG_PT_cloner(bpy.types.Panel):
         box = layout.box()
         if cp.mode in ("LINEAR", "RADIAL", "SPLINE"):
             box.prop(cp, "count")
-        if cp.mode == "LINEAR":
-            box.prop(cp, "lin_offset")
-        elif cp.mode == "RADIAL":
+        if cp.mode == "RADIAL":
             box.prop(cp, "radius")
             box.prop(cp, "arc")
             box.prop(cp, "plane")

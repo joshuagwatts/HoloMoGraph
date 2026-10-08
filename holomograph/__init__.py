@@ -10,7 +10,7 @@ Everything is built on Geometry Nodes, so clones are true instances.
 bl_info = {
     "name": "HoloMoGraph",
     "author": "Holowatts",
-    "version": (1, 2, 0),
+    "version": (1, 2, 1),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > HoloMoGraph",
     "description": "C4D-style MoGraph: Cloner, Effectors, Falloffs, MoText, "

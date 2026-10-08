@@ -22,6 +22,18 @@ def _upd(self, context):
     _refresh_cloner_of(self)
 
 
+def _upd_vec(self, context):
+    """Vector props rebuild (Blender's Python API doesn't propagate vector
+    modifier-input changes live; scalars do). Rebuild is fast (<1s)."""
+    try:
+        from .core.cloner import build_chain
+        obj = self.id_data
+        if obj is not None and getattr(obj, "hmg_type", "") == "CLONER":
+            build_chain(obj)
+    except Exception:
+        pass
+
+
 CLONER_MODES = [
     ("LINEAR", "Linear", "Clones along a line", 0),
     ("RADIAL", "Radial", "Clones on a circle / arc", 1),
@@ -69,7 +81,7 @@ class HMG_ClonerProps(bpy.types.PropertyGroup):
     count_z: bpy.props.IntProperty(name="Count Z", default=1, min=1, update=_upd)
     # linear
     lin_offset: bpy.props.FloatVectorProperty(name="Offset", default=(2.0, 0, 0),
-                                              subtype="TRANSLATION", update=_upd)
+                                              subtype="TRANSLATION", update=_upd_vec)
     # radial
     radius: bpy.props.FloatProperty(name="Radius", default=5.0, min=0.01, update=_upd)
     arc: bpy.props.FloatProperty(name="Arc", default=360.0, min=0.0, max=360.0,
@@ -79,7 +91,7 @@ class HMG_ClonerProps(bpy.types.PropertyGroup):
                                   default="XZ", update=_upd)
     # grid
     spacing: bpy.props.FloatVectorProperty(name="Spacing", default=(2.0, 2.0, 2.0),
-                                           subtype="TRANSLATION", update=_upd)
+                                           subtype="TRANSLATION", update=_upd_vec)
     # object mode
     dist_object: bpy.props.PointerProperty(name="Distribution Object",
                                            type=bpy.types.Object, update=_upd)
@@ -97,12 +109,12 @@ class HMG_ClonerProps(bpy.types.PropertyGroup):
     align_to_spline: bpy.props.BoolProperty(name="Align to Spline", default=True,
                                             update=_upd)
     # per-step transforms (the C4D P/R/S per clone step)
-    step_position: bpy.props.FloatVectorProperty(name="P", default=(0, 0, 0),
-                                                 subtype="TRANSLATION", update=_upd)
+    step_position: bpy.props.FloatVectorProperty(name="P", default=(2.0, 0, 0),
+                                                 subtype="TRANSLATION", update=_upd_vec)
     step_rotation: bpy.props.FloatVectorProperty(name="R", default=(0, 0, 0),
-                                                 subtype="EULER", unit="ROTATION", update=_upd)
+                                                 subtype="EULER", unit="ROTATION", update=_upd_vec)
     step_scale: bpy.props.FloatVectorProperty(name="S", default=(1, 1, 1),
-                                              subtype="XYZ", update=_upd)
+                                              subtype="XYZ", update=_upd_vec)
     # instance source
     instance_object: bpy.props.PointerProperty(name="Instance Object",
                                                type=bpy.types.Object, update=_upd)
@@ -211,7 +223,7 @@ class HMG_EffectorProps(bpy.types.PropertyGroup):
 
 class HMG_FalloffProps(bpy.types.PropertyGroup):
     shape: bpy.props.EnumProperty(name="Shape", items=FALLOFF_SHAPES,
-                                  default="SPHERE", update=_upd)
+                                  default="INFINITE", update=_upd)
     size: bpy.props.FloatVectorProperty(name="Size", default=(2.0, 2.0, 2.0),
                                         subtype="XYZ", update=_upd)
     inner: bpy.props.FloatProperty(name="Inner Offset", default=0.0,

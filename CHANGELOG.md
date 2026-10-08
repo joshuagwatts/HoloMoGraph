@@ -65,3 +65,11 @@ C4D-style workflow:
 - Parenting is LIVE: drag an object under the cloner and it clones instantly —
   no more manual Rebuild button. A depsgraph handler watches for hierarchy
   changes and rebuilds automatically.
+
+## v1.2.1 — 2026-10-08
+
+Bug fixes:
+- Plain effector default falloff is now INFINITE (was SPHERE) — position/rotation
+  apply uniformly instead of a confusing gradient. C4D-style.
+- Linear cloner mode now uses PStep (per-step position) — was using a separate
+  "Offset" and PStep did nothing. PStep defaults to (2,0,0).

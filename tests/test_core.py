@@ -187,9 +187,8 @@ def t_eval_effector_plain():
     mats, _ = _collect(cl)
     assert len(mats) == 4, f"expected 4, got {len(mats)}"
     pairs = sorted((round(m.x, 3), round(m.z, 3)) for m in mats)
-    # linear x = 0,2,4,6; auto sphere falloff (r=2 at origin) weights 1,.5,0,0
-    # plain z+5 -> z = 5, 2.5, 0, 0
-    assert pairs == [(0.0, 5.0), (2.0, 2.5), (4.0, 0.0), (6.0, 0.0)], \
+    # linear x = 0,2,4,6; default INFINITE falloff -> uniform z+5
+    assert pairs == [(0.0, 5.0), (2.0, 5.0), (4.0, 5.0), (6.0, 5.0)], \
         f"plain+falloff wrong: {pairs}"
 
 

@@ -115,14 +115,14 @@ def _mode_iface(tree):
 def build_mode_linear():
     tree = ng_new("HMG_Mode_Linear")
     _mode_iface(tree)
-    iface_in(tree, "Offset", "VECTOR", default=(2.0, 0, 0))
     gin, gou = io_nodes(tree)
     pts = add_node(tree, "GeometryNodePoints", (-200, 0))
     link(tree, gin.outputs["Count"], pts.inputs["Count"])
     idx = add_node(tree, "GeometryNodeInputIndex", (-200, -200))
     idxf = math(tree, "ADD", idx.outputs["Index"], value(tree, 0.0).outputs[0],
                 location=(0, -200))
-    off = vmath(tree, "SCALE", gin.outputs["Offset"], None, None, idxf.outputs[0],
+    # Use PStep (per-step position) for the linear offset — C4D-style.
+    off = vmath(tree, "SCALE", gin.outputs["PStep"], None, None, idxf.outputs[0],
                 location=(200, 0))
     sp = add_node(tree, "GeometryNodeSetPosition", (400, 0))
     link(tree, pts.outputs["Points"], sp.inputs["Geometry"])
@@ -573,10 +573,9 @@ def _define_master_inputs(tree, cp):
                                       "SPLINE": 5}[cp.mode],
         min_value=0, max_value=5)
     _ii(tree, "Count", "INT", default=cp.count, min_value=1)
-    _ii(tree, "PStep", "VECTOR", default=tuple(cp.step_position))
-    _ii(tree, "RStep", "VECTOR", default=tuple(cp.step_rotation))
-    _ii(tree, "SStep", "VECTOR", default=tuple(cp.step_scale))
-    _ii(tree, "Offset", "VECTOR", default=tuple(cp.lin_offset))
+    for name, vec in (("PStep", cp.step_position), ("RStep", cp.step_rotation),
+                      ("SStep", cp.step_scale), ("Spacing", cp.spacing)):
+        _ii(tree, name, "VECTOR", default=tuple(vec))
     _ii(tree, "Radius", "FLOAT", default=cp.radius, min_value=0.01)
     _ii(tree, "Arc", "FLOAT", default=cp.arc)
     _ii(tree, "Plane", "INT", default={"XY": 0, "XZ": 1, "YZ": 2}[cp.plane],
@@ -584,7 +583,6 @@ def _define_master_inputs(tree, cp):
     _ii(tree, "Count X", "INT", default=cp.count_x, min_value=1)
     _ii(tree, "Count Y", "INT", default=cp.count_y, min_value=1)
     _ii(tree, "Count Z", "INT", default=cp.count_z, min_value=1)
-    _ii(tree, "Spacing", "VECTOR", default=tuple(cp.spacing))
     _ii(tree, "Columns", "INT", default=cp.count_x, min_value=1)
     _ii(tree, "Rows", "INT", default=cp.count_y, min_value=1)
     _ii(tree, "Target", "OBJECT", default=cp.dist_object)
@@ -878,7 +876,38 @@ def build_chain(cloner_obj):
     link(tree, geo, gou.inputs["Geometry"])
     _mirror_drivers(tree, drv_items)
     ensure_modifier(cloner_obj, tree)
+    # Reset modifier inputs from props (modifiers keep stale values across
+    # rebuilds when identifiers match; vectors especially).
+    _reset_modifier_inputs(cloner_obj)
     return tree
+
+
+def _reset_modifier_inputs(cloner_obj):
+    """Set all modifier inputs from current props (fresh rebuild)."""
+    mod = cloner_obj.modifiers.get("HoloMoGraph")
+    if mod is None or mod.node_group is None:
+        return
+    tree = mod.node_group
+    cp = cloner_obj.hmg_cloner
+    # Scalars via sync (live-safe)
+    sync_cloner_inputs(cloner_obj)
+    # Vectors: set directly (fresh build, no live-update needed)
+    for name, vec in (("PStep", cp.step_position), ("RStep", cp.step_rotation),
+                      ("SStep", cp.step_scale), ("Spacing", cp.spacing)):
+        ident = _mod_input_id(tree, name)
+        if ident is None:
+            continue
+        try:
+            if bpy.app.version >= (5, 2, 0):
+                getattr(mod.properties.inputs, ident).value = tuple(vec)
+            else:
+                mod[ident] = tuple(vec)
+        except Exception:
+            pass
+    try:
+        mod.id_data.update_tag()
+    except Exception:
+        pass
 
 
 def new_cloner_object(context, name):
@@ -947,7 +976,12 @@ def _set_mod_input(mod, identifier, value):
 
 
 def sync_cloner_inputs(cloner_obj):
-    """Sync cloner props to master group modifier inputs (live, no rebuild)."""
+    """Sync cloner props to master group modifier inputs (live, no rebuild).
+
+    Note: Vector props (PStep etc.) use _upd_vec which rebuilds, because
+    Blender's Python API doesn't propagate vector modifier-input changes.
+    Only scalars are synced here.
+    """
     mod = cloner_obj.modifiers.get("HoloMoGraph")
     if mod is None or mod.node_group is None:
         return
@@ -957,15 +991,10 @@ def sync_cloner_inputs(cloner_obj):
         "Mode": {"LINEAR": 0, "RADIAL": 1, "GRID": 2,
                  "HONEYCOMB": 3, "OBJECT": 4, "SPLINE": 5}[cp.mode],
         "Count": cp.count,
-        "PStep": tuple(cp.step_position),
-        "RStep": tuple(cp.step_rotation),
-        "SStep": tuple(cp.step_scale),
-        "Offset": tuple(cp.lin_offset),
         "Radius": cp.radius,
         "Arc": cp.arc,
         "Plane": {"XY": 0, "XZ": 1, "YZ": 2}[cp.plane],
         "Count X": cp.count_x, "Count Y": cp.count_y, "Count Z": cp.count_z,
-        "Spacing": tuple(cp.spacing),
         "Columns": cp.count_x, "Rows": cp.count_y,
         "Target": cp.dist_object,
         "Dist Mode": {"VERTEX": 0, "EDGE": 1, "FACE": 2, "SURFACE": 3}[cp.dist_mode],
