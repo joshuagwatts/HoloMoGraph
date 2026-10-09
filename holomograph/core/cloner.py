@@ -448,6 +448,15 @@ def _fx_params(eff) -> dict:
         d.update(offset=p.time_offset, stagger=p.time_stagger)
     elif t == "SPLINE":
         d.update(amount=p.spline_amount, align=p.spline_align)
+    # Built-in proximity falloff (C4D-style)
+    d.update(use_builtin_falloff=p.use_builtin_falloff,
+             prox_shape=["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE",
+                         "CYLINDER", "TUBE", "CONE", "TORUS"].index(p.prox_shape),
+             prox_size=tuple(p.prox_size), prox_inner=p.prox_inner,
+             prox_curve=p.prox_curve, prox_invert=p.prox_invert)
+    # Built-in time animation
+    d.update(use_time_anim=p.use_time_anim,
+             time_speed=p.time_speed, time_phase=p.time_phase)
     return d
 
 
@@ -724,6 +733,15 @@ def _fx_driver_map(eff_type):
         base += [("delay", "Delay"), ("stiffness", "Stiffness"), ("damping", "Damping")]
     if eff_type == "TIME":
         base += [("time_offset", "Offset"), ("time_stagger", "Stagger")]
+    # Built-in proximity and time anim (all effectors)
+    base += [("use_builtin_falloff", "Use Prox Falloff"),
+             ("prox_size", "Prox Size"),
+             ("prox_inner", "Prox Inner"),
+             ("prox_curve", "Prox Curve"),
+             ("prox_invert", "Prox Invert"),
+             ("use_time_anim", "Use Time Anim"),
+             ("time_speed", "Time Speed"),
+             ("time_phase", "Time Phase")]
     return base
 
 
@@ -809,6 +827,15 @@ def _set_fx_params(fn, eff, fo):
         put("Align", ep.spline_align)
     if t == "TIME":
         put("Offset", ep.time_offset); put("Stagger", ep.time_stagger)
+    # Built-in proximity falloff (C4D-style)
+    put("Use Prox Falloff", ep.use_builtin_falloff)
+    put("Prox Shape", ["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE",
+                       "CYLINDER", "TUBE", "CONE", "TORUS"].index(ep.prox_shape))
+    put("Prox Size", tuple(ep.prox_size)); put("Prox Inner", ep.prox_inner)
+    put("Prox Curve", ep.prox_curve); put("Prox Invert", ep.prox_invert)
+    # Built-in time animation
+    put("Use Time Anim", ep.use_time_anim)
+    put("Time Speed", ep.time_speed); put("Time Phase", ep.time_phase)
     if fo is not None:
         fp = fo.hmg_falloff
         put("Shape", ["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE",

@@ -157,6 +157,23 @@ class HMG_PT_effector(bpy.types.Panel):
         layout.prop(ep, "strength")
         layout.prop(ep, "order")
         layout.prop(ep, "falloff")
+        # Built-in proximity falloff (C4D-style)
+        box = layout.box()
+        box.label(text="Proximity Falloff (built-in)", icon="SPHERECURVE")
+        box.prop(ep, "use_builtin_falloff")
+        if ep.use_builtin_falloff:
+            box.prop(ep, "prox_shape", text="Shape")
+            box.prop(ep, "prox_size", text="Size")
+            box.prop(ep, "prox_inner", text="Inner")
+            box.prop(ep, "prox_curve", text="Curve")
+            box.prop(ep, "prox_invert", text="Invert")
+        # Built-in time animation
+        box = layout.box()
+        box.label(text="Time Animation", icon="TIME")
+        box.prop(ep, "use_time_anim")
+        if ep.use_time_anim:
+            box.prop(ep, "time_speed", text="Speed")
+            box.prop(ep, "time_phase", text="Phase")
         t = ep.eff_type
         box = layout.box()
         if t in ("PLAIN", "SOUND", "STEP"):

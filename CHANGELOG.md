@@ -89,3 +89,13 @@ Nested cloner control:
   one grouped unit, transforming each instance as a whole.
 - OFF (flattened, coming soon): will let parent effectors affect each nested
   clone individually.
+
+## v1.2.4 — 2026-10-09
+
+Every effector now has built-in Proximity and Time Animation (C4D-style):
+- Proximity Falloff (built-in): No separate falloff object needed. Each effector
+  has its own Shape/Size/Inner/Curve/Invert right in its panel. External falloff
+  object still wins if linked.
+- Time Animation (built-in): "Animate Over Time" modulates the effector's strength
+  with a smooth 0..1 oscillation driven by the timeline. Speed (osc/sec) + Phase.
+  Works on all 11 effector types.
