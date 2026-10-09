@@ -64,6 +64,26 @@ def on_depsgraph_update(scene, depsgraph):
                 build_chain(cl)
             except Exception:
                 pass
+            # C4D-style: hide source objects parented to the cloner in the
+            # viewport (they're the template, only the clones should show).
+            # Still selectable in the Outliner. Unhide when unparented.
+            try:
+                # First, unhide any objects we previously hid that are no longer children
+                for obj in bpy.data.objects:
+                    if getattr(obj, "_hmg_hidden_source", False):
+                        if obj.parent != cl:
+                            obj.hide_viewport = False
+                            obj["_hmg_hidden_source"] = False
+                # Now hide current source children
+                for child in cl.children:
+                    t = getattr(child, "hmg_type", "")
+                    if t not in ("CLONER", "EFFECTOR", "FALLOFF"):
+                        # Regular object = clone source, hide in viewport
+                        if not child.hide_viewport:
+                            child.hide_viewport = True
+                            child["_hmg_hidden_source"] = True
+            except Exception:
+                pass
     finally:
         _rebuilding = False
 

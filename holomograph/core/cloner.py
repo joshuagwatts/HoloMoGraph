@@ -847,6 +847,18 @@ def _set_fx_params(fn, eff, fo):
 def build_chain(cloner_obj):
     """(Re)build the full node tree for a cloner object."""
     from .nodes import ng_new as _new
+    # Migrate old octahedron gizmo to invisible single-vertex (C4D-style)
+    try:
+        me = cloner_obj.data
+        if me is not None and len(me.vertices) > 1:
+            me.clear_geometry()
+            me.from_pydata([(0, 0, 0)], [], [])
+            me.update()
+            # Remove wireframe display if it was set
+            if cloner_obj.display_type == "WIRE":
+                cloner_obj.display_type = "TEXTURED"
+    except Exception:
+        pass
     tree = _new(chain_group_name(cloner_obj))
     iface_out(tree, "Geometry", "GEOMETRY")
     gin, gou = io_nodes(tree)
@@ -968,19 +980,18 @@ def _reset_modifier_inputs(cloner_obj):
 
 
 def new_cloner_object(context, name):
-    """Create the cloner object. A wireframe octahedron mesh (not an empty)
-    because Blender 5.0 cannot put modifiers on empties. The modifier output
-    replaces the mesh entirely, so the gizmo never renders — it's just a
-    visible, selectable handle in the viewport, like a C4D cloner icon."""
+    """Create the cloner object. A single-vertex mesh (not an empty)
+    because Blender 5.0 cannot put modifiers on empties. The vertex is
+    invisible in the viewport — like C4D, you only see the cloned meshes.
+    Select the cloner from the Outliner (like C4D's Object Manager).
+    The modifier output replaces the mesh entirely."""
     me = bpy.data.meshes.new(f"{name} Mesh")
-    # Octahedron: 6 verts, 8 triangular faces (wireframe gizmo)
-    verts = [(0, 0, 1), (0, 0, -1), (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0)]
-    faces = [(0, 2, 4), (0, 4, 3), (0, 3, 5), (0, 5, 2),
-             (1, 4, 2), (1, 3, 4), (1, 5, 3), (1, 2, 5)]
-    me.from_pydata(verts, [], faces)
+    # Single vertex at origin — invisible, just a host for the modifier
+    me.from_pydata([(0, 0, 0)], [], [])
     me.update()
     obj = bpy.data.objects.new(name, me)
-    obj.display_type = "WIRE"
+    # Don't display as wireframe — the vertex is invisible anyway
+    # (C4D-style: cloner itself is invisible, only clones show)
     context.scene.collection.objects.link(obj)
     context.view_layer.objects.active = obj
     obj.select_set(True)

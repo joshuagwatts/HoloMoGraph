@@ -99,3 +99,13 @@ Every effector now has built-in Proximity and Time Animation (C4D-style):
 - Time Animation (built-in): "Animate Over Time" modulates the effector's strength
   with a smooth 0..1 oscillation driven by the timeline. Speed (osc/sec) + Phase.
   Works on all 11 effector types.
+
+## v1.2.5 — 2026-10-09
+
+C4D-style viewport (you only see the meshes):
+- Cloner object is now invisible in the viewport (single vertex, like C4D's
+  invisible Cloner). Select it from the Outliner. No more wireframe octahedron.
+- Source objects parented to the cloner auto-hide in the viewport (C4D-style:
+  the template hides, only the clones show). Still selectable in Outliner.
+  Auto-unhides if you unparent it.
+- Existing octahedron cloners auto-migrate to invisible on next rebuild.
