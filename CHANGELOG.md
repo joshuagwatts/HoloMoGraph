@@ -109,3 +109,14 @@ C4D-style viewport (you only see the meshes):
   the template hides, only the clones show). Still selectable in Outliner.
   Auto-unhides if you unparent it.
 - Existing octahedron cloners auto-migrate to invisible on next rebuild.
+
+## v1.2.6 — 2026-10-11
+
+Nested effectors now work and layer correctly (C4D-style):
+- FIXED: Nested cloners were rendering duplicates (child's own clones + parent's
+  instances overlapping). Now the parent calls the child's node group directly
+  (not via Object Info), and the nested child's viewport is hidden — you only
+  see the clones through the parent, like C4D.
+- Effectors layer properly: child's effectors apply to child's clones first,
+  then parent's effectors transform each nested instance as a whole.
+- Auto-restores when unnested.

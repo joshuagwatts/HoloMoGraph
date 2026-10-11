@@ -69,11 +69,22 @@ def on_depsgraph_update(scene, depsgraph):
             # Still selectable in the Outliner. Unhide when unparented.
             try:
                 # First, unhide any objects we previously hid that are no longer children
+                # and restore nested cloner viewport modifiers
                 for obj in bpy.data.objects:
                     if getattr(obj, "_hmg_hidden_source", False):
                         if obj.parent != cl:
                             obj.hide_viewport = False
                             obj["_hmg_hidden_source"] = False
+                    if getattr(obj, "hmg_type", "") == "CLONER":
+                        is_nested = (obj.parent is not None and
+                                     getattr(obj.parent, "hmg_type", "") == "CLONER")
+                        if not is_nested:
+                            try:
+                                mod = obj.modifiers.get("HoloMoGraph")
+                                if mod is not None and not mod.show_viewport:
+                                    mod.show_viewport = True
+                            except Exception:
+                                pass
                 # Now hide current source children
                 for child in cl.children:
                     t = getattr(child, "hmg_type", "")
