@@ -735,7 +735,6 @@ def _fx_driver_map(eff_type):
         base += [("time_offset", "Offset"), ("time_stagger", "Stagger")]
     # Built-in proximity and time anim (all effectors)
     base += [("use_builtin_falloff", "Use Prox Falloff"),
-             ("prox_shape", "Prox Shape"),
              ("prox_size", "Prox Size"),
              ("prox_inner", "Prox Inner"),
              ("prox_curve", "Prox Curve"),

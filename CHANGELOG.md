@@ -130,3 +130,11 @@ Revert nested hiding (user feedback):
 - Back to Object Info for nesting (reliable, updates work).
 - Note: Built-in Proximity Falloff (v1.2.4) is experimental — use external
   Falloff objects for reliable results for now.
+
+## v1.2.8 — 2026-10-11
+
+Clean revert to v1.2.5 state (user: "go back 2 steps"):
+- Removed v1.2.6 nested hiding changes entirely.
+- Removed v1.2.7 partial fixes.
+- Back to the working v1.2.5: Object Info nesting, invisible cloner, source auto-hide.
+- The v1.2.4 built-in Proximity/Time features are still present but default OFF.
