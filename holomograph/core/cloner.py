@@ -735,6 +735,7 @@ def _fx_driver_map(eff_type):
         base += [("time_offset", "Offset"), ("time_stagger", "Stagger")]
     # Built-in proximity and time anim (all effectors)
     base += [("use_builtin_falloff", "Use Prox Falloff"),
+             ("prox_shape", "Prox Shape"),
              ("prox_size", "Prox Size"),
              ("prox_inner", "Prox Inner"),
              ("prox_curve", "Prox Curve"),
@@ -891,49 +892,23 @@ def build_chain(cloner_obj):
     instance_obj = _hierarchy_instance_source(cloner_obj)
     if instance_obj is not None:
         # Make sure the nested cloner's own chain is built.
-        nested_cloner = None
         if getattr(instance_obj, "hmg_type", "") == "CLONER":
-            nested_cloner = instance_obj
             try:
                 build_chain(instance_obj)
             except Exception:
                 pass
-            # C4D-style: nested cloner doesn't draw its own clones in viewport
-            # (only visible through parent). Hide its modifier viewport display.
-            try:
-                mod = instance_obj.modifiers.get("HoloMoGraph")
-                if mod is not None:
-                    mod.show_viewport = False
-            except Exception:
-                pass
-        # Nested cloner: instance the child's chain node group DIRECTLY
-        # (not via Object Info, which breaks when child is hidden and causes
-        # duplicate rendering). This is C4D-style: parent calls child's generator.
-        if nested_cloner is not None:
-            try:
-                child_chain = ng_get(chain_group_name(nested_cloner))
-                # Instantiate child's chain in parent's tree
-                child_node = group_node(tree, child_chain, (x, 200), f"Nested: {nested_cloner.name}")
-                child_geo = child_node.outputs["Geometry"]
-            except Exception:
-                # Fallback to Object Info if chain not available
-                iinfo = object_info(tree, instance_obj, (x, 200), as_instance=True,
-                                    transform_space="ORIGINAL")
-                child_geo = iinfo.outputs["Geometry"]
-        else:
-            # Regular object: use Object Info
-            iinfo = object_info(tree, instance_obj, (x, 200), as_instance=True,
-                                transform_space="ORIGINAL")
-            child_geo = iinfo.outputs["Geometry"]
-        # Nested cloner: instance the whole child arrangement at each point.
+        # Nested cloner: instance the whole child cloner object (its evaluated
+        # instances) at each of this cloner's points - C4D-style nesting.
         # The child is treated as one grouped unit; parent effectors transform
-        # each child instance as a whole.
+        # each child instance as a whole. (Flattened mode coming soon.)
+        iinfo = object_info(tree, instance_obj, (x, 200), as_instance=True,
+                            transform_space="ORIGINAL")
         roff = named_attr(tree, A_ROFF, "FLOAT_VECTOR", (x, 0))
         rot = euler_to_rotation(tree, roff.outputs["Attribute"], (x + 150, 0))
         smul = named_attr(tree, A_SMUL, "FLOAT_VECTOR", (x, -150))
         iop = add_node(tree, "GeometryNodeInstanceOnPoints", (x + 300, 100))
         link(tree, geo, iop.inputs["Points"])
-        link(tree, child_geo, iop.inputs["Instance"])
+        link(tree, iinfo.outputs["Geometry"], iop.inputs["Instance"])
         link(tree, rot.outputs["Rotation"], iop.inputs["Rotation"])
         link(tree, smul.outputs["Attribute"], iop.inputs["Scale"])
         geo = iop.outputs["Instances"]

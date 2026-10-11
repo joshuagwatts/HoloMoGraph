@@ -81,12 +81,9 @@ def _apply_falloff(h, falloff_obj, use_builtin=False):
                 pass
     else:
         # Use built-in proximity falloff params
-        # Falloff object: use the cloner itself (proximity from cloner origin)
-        # Actually, for built-in we don't need a falloff object — the falloff
-        # subgroup can work with just the params (it uses Cloner for space).
-        # We'll pass None and let it use default behavior.
+        # Falloff object: use the Cloner itself (proximity measured from cloner origin)
         try:
-            fg.inputs["Falloff"].default_value = None
+            link(tree, gin.outputs["Cloner"], fg.inputs["Falloff"])
         except Exception:
             pass
         for pname, prox_name in (("Shape", "Prox Shape"), ("Size", "Prox Size"),

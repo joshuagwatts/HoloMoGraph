@@ -120,3 +120,13 @@ Nested effectors now work and layer correctly (C4D-style):
 - Effectors layer properly: child's effectors apply to child's clones first,
   then parent's effectors transform each nested instance as a whole.
 - Auto-restores when unnested.
+
+## v1.2.7 — 2026-10-11
+
+Revert nested hiding (user feedback):
+- REMOVED the v1.2.6 change that hid nested cloners. "Cloning the clones is good"
+  — nested cloners render their own clones AND the parent instances them.
+  No more hiding.
+- Back to Object Info for nesting (reliable, updates work).
+- Note: Built-in Proximity Falloff (v1.2.4) is experimental — use external
+  Falloff objects for reliable results for now.
