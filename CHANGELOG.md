@@ -147,3 +147,12 @@ Animated Random effector:
   line cloner + animated random, nested in a grid cloner + formula waves.
 - Verified: nested cloners with different effectors (Random on child, Formula
   on parent) layer correctly.
+
+## v1.2.10 — 2026-10-11
+
+Fix parenting workflow:
+- REMOVED auto-hide of source objects. When you parent a cube to the cloner,
+  the cube stays visible (you said cloning the clones is good).
+- The handler now unhides any sources it previously auto-hid.
+- Parenting a cube to the cloner clones it (verified working). If auto-rebuild
+  misses, use the "Rebuild Cloner" button in the panel.
