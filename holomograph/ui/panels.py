@@ -193,6 +193,10 @@ class HMG_PT_effector(bpy.types.Panel):
             if ep.use_color:
                 box.prop(ep, "color_a")
                 box.prop(ep, "color_b")
+            box.separator()
+            box.prop(ep, "random_animate", text="Animated")
+            if ep.random_animate:
+                box.prop(ep, "random_speed", text="Speed")
         if t == "STEP":
             box.prop(ep, "steps")
         if t == "FORMULA":

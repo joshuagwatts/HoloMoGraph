@@ -138,3 +138,12 @@ Clean revert to v1.2.5 state (user: "go back 2 steps"):
 - Removed v1.2.7 partial fixes.
 - Back to the working v1.2.5: Object Info nesting, invisible cloner, source auto-hide.
 - The v1.2.4 built-in Proximity/Time features are still present but default OFF.
+
+## v1.2.9 — 2026-10-11
+
+Animated Random effector:
+- Random effector now has "Animated" toggle + "Speed" (new values per second).
+  When on, the random offsets change over time — perfect for the workflow:
+  line cloner + animated random, nested in a grid cloner + formula waves.
+- Verified: nested cloners with different effectors (Random on child, Formula
+  on parent) layer correctly.
