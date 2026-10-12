@@ -102,6 +102,18 @@ def _idx_norm(h):
 # Shared "transform applier": apply P/R/S/Color/Alpha/Visibility/Time
 # ---------------------------------------------------------------------------
 
+def _add_user_psr(h, w, P, gin):
+    """C4D-style: every effector gets user Position/Rotation/Scale on top.
+    Adds the inputs and applies them (accumulates via _apply_transforms)."""
+    tree = h["tree"]
+    iface_in(tree, "Position", "VECTOR", default=P.get("position", (0, 0, 0)))
+    iface_in(tree, "Rotation", "VECTOR", default=P.get("rotation", (0, 0, 0)),
+             description="Euler radians")
+    iface_in(tree, "Scale", "VECTOR", default=P.get("scale", (1, 1, 1)))
+    _apply_transforms(h, w, gin.outputs["Position"], gin.outputs["Rotation"],
+                      gin.outputs["Scale"])
+
+
 def _apply_transforms(h, w, P, R, S, C=None, V=None, T=None):
     """P/R/S are offset sockets (already scaled as desired); w = weight.
     Adds P to hmg_poff, R to hmg_roff, multiplies hmg_smul by S-factor etc."""
@@ -365,6 +377,7 @@ def build_formula(name, P, falloff_obj):
                                     value(tree, 0.5).outputs[0]).outputs[0],
                          (1850, -650)), input_type="VECTOR").outputs[0]
     _apply_transforms(h, w, P_o, R_o, S_o, C_o, None, None)
+    _add_user_psr(h, w, P, gin)
     return _finish(h, w)
 
 
@@ -424,8 +437,8 @@ def build_shader(name, P, falloff_obj):
                   location=(1700, -650)).outputs["Vector"]
     C = switch(tree, gin.outputs["Use Color"], one_v, col, input_type="RGBA",
                location=(1700, -800)).outputs[0]
-    _apply_transforms(h, w, P_off, None, S_fac,
-                      C, None, None)
+    _apply_transforms(h, w, P_off, None, S_fac, C, None, None)
+    _add_user_psr(h, w, P, gin)
     return _finish(h, w)
 
 
@@ -535,6 +548,7 @@ def build_delay(name, P, falloff_obj):
     geo = store_attr(tree, geo, A_ROFF, new_r, "FLOAT_VECTOR", location=(2550, -200)).outputs["Geometry"]
     geo = store_attr(tree, geo, A_SMUL, new_s, "FLOAT_VECTOR", location=(2700, -200)).outputs["Geometry"]
     h["geo"] = geo
+    _add_user_psr(h, w, P, gin)
     return _finish(h, w)
 
 
@@ -576,6 +590,7 @@ def build_push_apart(name, P, falloff_obj):
     off = vmath(tree, "MULTIPLY", dir_l.outputs["Vector"],
                 _to_vec(tree, push.outputs[0], (1950, 200)), location=(2100, 200))
     _apply_transforms(h, w, off.outputs["Vector"], None, None, None, None, None)
+    _add_user_psr(h, w, P, gin)
     return _finish(h, w)
 
 
@@ -614,6 +629,7 @@ def build_target(name, P, falloff_obj):
     geo = store_attr(tree, h["geo"], A_ROFF, blended.outputs["Vector"], "FLOAT_VECTOR",
                      location=(2250, -50)).outputs["Geometry"]
     h["geo"] = geo
+    _add_user_psr(h, w, P, gin)
     return _finish(h, w)
 
 
@@ -675,6 +691,7 @@ def build_spline(name, P, falloff_obj):
     geo = store_attr(tree, geo, A_ROFF, do_align, "FLOAT_VECTOR",
                      location=(3000, 150)).outputs["Geometry"]
     h["geo"] = geo
+    _add_user_psr(h, w, P, gin)
     return _finish(h, w)
 
 
@@ -696,6 +713,7 @@ def build_time(name, P, falloff_obj):
                        location=(850, -300)).outputs[0], location=(1000, -300)).outputs[0],
              location=(1150, -300)).outputs[0]
     _apply_transforms(h, w, None, None, None, None, None, t)
+    _add_user_psr(h, w, P, gin)
     return _finish(h, w)
 
 

@@ -200,3 +200,11 @@ Effector love (batch 1: PLAIN, RANDOM, STEP):
 - RANDOM: UI reorganized into Variation / Animation / Color sections.
 - STEP: UI clarifies it divides clones into stepped groups.
 - 12/12 tests pass.
+
+## v1.2.16 — 2026-10-12
+
+PSR for all effectors (user: "should have access to the PSR for all of these effectors"):
+- FORMULA, DELAY, PUSH_APART, TARGET, SPLINE, TIME now have Position/Rotation/Scale
+  controls in their UI. The PSR is added on top of the effector's specific behavior.
+- SHADER has the UI but PSR wiring needs investigation (inputs exist, defaults correct).
+- 12/12 tests pass.

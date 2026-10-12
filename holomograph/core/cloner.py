@@ -434,21 +434,36 @@ def _fx_params(eff) -> dict:
                  amplitude=p.amplitude, frequency=p.frequency, phase=p.phase,
                  speed=p.speed,
                  target=["POSITION", "ROTATION", "SCALE", "COLOR"].index(p.target),
-                 axis=tuple(p.axis))
+                 axis=tuple(p.axis),
+                 position=tuple(p.position), rotation=tuple(p.rotation),
+                 scale=tuple(p.scale))
     elif t == "SHADER":
         d.update(image_name=p.image.name if p.image else "",
                  uv_scale=tuple(p.uv_scale), uv_offset=tuple(p.uv_offset),
                  position_amt=p.shader_pos_amt, scale_amt=p.shader_scl_amt,
-                 use_color=p.shader_use_color)
+                 use_color=p.shader_use_color,
+                 position=tuple(p.position), rotation=tuple(p.rotation),
+                 scale=tuple(p.scale))
     elif t == "DELAY":
         d.update(delay=p.delay, stiffness=p.stiffness, damping=p.damping,
-                 delay_mode=["SMOOTH", "SPRING"].index(p.delay_mode))
+                 delay_mode=["SMOOTH", "SPRING"].index(p.delay_mode),
+                 position=tuple(p.position), rotation=tuple(p.rotation),
+                 scale=tuple(p.scale))
     elif t == "PUSH_APART":
-        d.update(radius=p.pa_radius)
+        d.update(radius=p.pa_radius,
+                 position=tuple(p.position), rotation=tuple(p.rotation),
+                 scale=tuple(p.scale))
+    elif t == "TARGET":
+        d.update(position=tuple(p.position), rotation=tuple(p.rotation),
+                 scale=tuple(p.scale))
     elif t == "TIME":
-        d.update(offset=p.time_offset, stagger=p.time_stagger)
+        d.update(offset=p.time_offset, stagger=p.time_stagger,
+                 position=tuple(p.position), rotation=tuple(p.rotation),
+                 scale=tuple(p.scale))
     elif t == "SPLINE":
-        d.update(amount=p.spline_amount, align=p.spline_align)
+        d.update(amount=p.spline_amount, align=p.spline_align,
+                 position=tuple(p.position), rotation=tuple(p.rotation),
+                 scale=tuple(p.scale))
     return d
 
 
@@ -721,11 +736,22 @@ def _fx_driver_map(eff_type):
                  ("random_speed", "Random Speed")]
     if eff_type == "FORMULA":
         base += [("amplitude", "Amplitude"), ("frequency", "Frequency"),
-                 ("phase", "Phase"), ("speed", "Speed")]
+                 ("phase", "Phase"), ("speed", "Speed"),
+                 ("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
+    if eff_type == "SHADER":
+        base += [("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
     if eff_type == "DELAY":
-        base += [("delay", "Delay"), ("stiffness", "Stiffness"), ("damping", "Damping")]
+        base += [("delay", "Delay"), ("stiffness", "Stiffness"), ("damping", "Damping"),
+                 ("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
+    if eff_type == "PUSH_APART":
+        base += [("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
+    if eff_type == "TARGET":
+        base += [("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
+    if eff_type == "SPLINE":
+        base += [("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
     if eff_type == "TIME":
-        base += [("time_offset", "Offset"), ("time_stagger", "Stagger")]
+        base += [("time_offset", "Offset"), ("time_stagger", "Stagger"),
+                 ("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
     return base
 
 
@@ -793,25 +819,39 @@ def _set_fx_params(fn, eff, fo):
         put("Phase", ep.phase); put("Speed", ep.speed)
         put("Target", ["POSITION", "ROTATION", "SCALE", "COLOR"].index(ep.target))
         put("Axis", tuple(ep.axis))
+        put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
+        put("Scale", tuple(ep.scale))
     if t == "SHADER":
         put("Image Name", ep.image.name if ep.image else "")
         put("UV Scale", tuple(ep.uv_scale)); put("UV Offset", tuple(ep.uv_offset))
         put("Position Amt", ep.shader_pos_amt); put("Scale Amt", ep.shader_scl_amt)
+        put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
+        put("Scale", tuple(ep.scale))
         put("Use Color", ep.shader_use_color)
     if t == "DELAY":
         put("Delay", ep.delay); put("Stiffness", ep.stiffness)
         put("Damping", ep.damping)
         put("Mode", ["SMOOTH", "SPRING"].index(ep.delay_mode))
+        put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
+        put("Scale", tuple(ep.scale))
     if t == "PUSH_APART":
         put("Radius", ep.pa_radius); put("Push Object", ep.push_object)
         put("Use Object", ep.pa_use_object)
+        put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
+        put("Scale", tuple(ep.scale))
     if t == "TARGET":
         put("Target", ep.target_object)
+        put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
+        put("Scale", tuple(ep.scale))
     if t == "SPLINE":
         put("Spline", ep.spline_object); put("Amount", ep.spline_amount)
         put("Align", ep.spline_align)
+        put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
+        put("Scale", tuple(ep.scale))
     if t == "TIME":
         put("Offset", ep.time_offset); put("Stagger", ep.time_stagger)
+        put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
+        put("Scale", tuple(ep.scale))
     if fo is not None:
         fp = fo.hmg_falloff
         put("Shape", ["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE",
