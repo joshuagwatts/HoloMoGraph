@@ -191,3 +191,12 @@ AK47 reliability (user: "make sure its like a damn ak47"):
 - All errors contained — a failed rebuild can't take down the session.
 - Stress tested: 10x rapid parent/unparent, no crash, settings intact.
 - 12/12 tests pass.
+
+## v1.2.15 — 2026-10-12
+
+Effector love (batch 1: PLAIN, RANDOM, STEP):
+- PLAIN: default position is now (0,0,2) — adding a Plain effector immediately
+  lifts clones. No more "why is nothing happening."
+- RANDOM: UI reorganized into Variation / Animation / Color sections.
+- STEP: UI clarifies it divides clones into stepped groups.
+- 12/12 tests pass.

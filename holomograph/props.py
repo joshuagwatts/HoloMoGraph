@@ -150,7 +150,7 @@ class HMG_EffectorProps(bpy.types.PropertyGroup):
     falloff: bpy.props.PointerProperty(name="Falloff", type=bpy.types.Object,
                                        update=_upd)
     # plain / sound
-    position: bpy.props.FloatVectorProperty(name="Position", default=(0, 0, 0),
+    position: bpy.props.FloatVectorProperty(name="Position", default=(0, 0, 2.0),
                                             subtype="TRANSLATION", update=_upd)
     rotation: bpy.props.FloatVectorProperty(name="Rotation", default=(0, 0, 0),
                                             subtype="EULER", unit="ROTATION", update=_upd)

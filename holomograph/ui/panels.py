@@ -181,7 +181,10 @@ class HMG_PT_effector(bpy.types.Panel):
                 box.prop(ep, "color_a")
                 box.prop(ep, "color_b")
         if t == "STEP":
+            box.label(text="Divides clones into stepped groups:")
             box.prop(ep, "steps")
+            box.separator()
+            box.label(text="Transform per step:")
         if t == "FORMULA":
             box.prop(ep, "formula_mode")
             box.prop(ep, "target")
