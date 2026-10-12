@@ -164,3 +164,10 @@ Clean revert to v1.2.3 (user: "3 tries and ur out, go back to the one that worke
 - Basic effectors work. No auto-hide, no built-in falloff experiments.
 - Nesting effectors: parked for later, per user ("we will figure out the nesting
   effectors after u fix the main issue").
+
+## v1.2.12 — 2026-10-11
+
+Solid meshes, not wireframes (user: "i can see the wireframes but remember i wanted them solid?"):
+- Cloner is now invisible in viewport (single vertex, C4D-style). Select from Outliner.
+- Existing octahedron cloners auto-migrate to invisible on rebuild.
+- NO auto-hide of sources (user hated that). Parenting clones visibly.
