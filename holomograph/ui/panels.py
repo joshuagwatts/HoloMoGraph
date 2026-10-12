@@ -194,6 +194,10 @@ class HMG_PT_effector(bpy.types.Panel):
             box.prop(ep, "phase")
             box.prop(ep, "speed")
             box.separator()
+            box.prop(ep, "loop")
+            if ep.loop:
+                box.prop(ep, "loop_frame")
+            box.separator()
             box.label(text="Transform:")
             box.prop(ep, "position")
             box.prop(ep, "rotation")

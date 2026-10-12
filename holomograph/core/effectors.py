@@ -322,6 +322,8 @@ def build_formula(name, P, falloff_obj):
     iface_in(tree, "Frequency", "FLOAT", default=P.get("frequency", 1.0))
     iface_in(tree, "Phase", "FLOAT", default=P.get("phase", 0.0))
     iface_in(tree, "Speed", "FLOAT", default=P.get("speed", 1.0))
+    iface_in(tree, "Loop", "BOOLEAN", default=P.get("loop", False))
+    iface_in(tree, "Loop Frame", "INT", default=P.get("loop_frame", 60), min_value=1)
     iface_in(tree, "Target", "INT", default=P.get("target", 0), min_value=0, max_value=3,
              description="0 Position 1 Rotation 2 Scale 3 Color")
     iface_in(tree, "Axis", "VECTOR", default=P.get("axis", (0, 0, 1)))
@@ -333,13 +335,22 @@ def build_formula(name, P, falloff_obj):
 
     t = _idx_norm(h)
     stime = add_node(tree, "GeometryNodeInputSceneTime", (200, -500))
+    # Loop: phase = 2*pi*frame/loop_frame (seamless), else Seconds*Speed
+    loop_phase = math(tree, "MULTIPLY",
+                      math(tree, "DIVIDE", stime.outputs["Frame"],
+                           gin.outputs["Loop Frame"], location=(950, -480)).outputs[0],
+                      value(tree, 6.283185307, (950, -520)).outputs[0],
+                      location=(1100, -480)).outputs[0]
+    time_term = switch(tree, gin.outputs["Loop"],
+                       math(tree, "MULTIPLY", stime.outputs["Seconds"],
+                            gin.outputs["Speed"], location=(950, -420)).outputs[0],
+                       loop_phase, location=(1100, -420)).outputs[0]
     phase = math(tree, "ADD",
                  math(tree, "ADD",
                       math(tree, "MULTIPLY", t, gin.outputs["Frequency"],
                            location=(800, -300)).outputs[0],
                       gin.outputs["Phase"], location=(950, -300)).outputs[0],
-                 math(tree, "MULTIPLY", stime.outputs["Seconds"], gin.outputs["Speed"],
-                      location=(950, -420)).outputs[0], location=(1100, -350))
+                 time_term, location=(1100, -350))
     s_sin = math(tree, "SINE", phase.outputs[0], location=(1250, -200))
     s_cos = math(tree, "COSINE", phase.outputs[0], location=(1250, -350))
     # noise: white noise on index

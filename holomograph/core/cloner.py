@@ -432,7 +432,7 @@ def _fx_params(eff) -> dict:
     elif t == "FORMULA":
         d.update(formula_mode=["SINE", "COSINE", "LINEAR", "NOISE"].index(p.formula_mode),
                  amplitude=p.amplitude, frequency=p.frequency, phase=p.phase,
-                 speed=p.speed,
+                 speed=p.speed, loop=p.loop, loop_frame=p.loop_frame,
                  target=["POSITION", "ROTATION", "SCALE", "COLOR"].index(p.target),
                  axis=tuple(p.axis),
                  position=tuple(p.position), rotation=tuple(p.rotation),
@@ -737,6 +737,7 @@ def _fx_driver_map(eff_type):
     if eff_type == "FORMULA":
         base += [("amplitude", "Amplitude"), ("frequency", "Frequency"),
                  ("phase", "Phase"), ("speed", "Speed"),
+                 ("loop", "Loop"), ("loop_frame", "Loop Frame"),
                  ("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
     if eff_type == "SHADER":
         base += [("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
@@ -819,6 +820,7 @@ def _set_fx_params(fn, eff, fo):
         put("Phase", ep.phase); put("Speed", ep.speed)
         put("Target", ["POSITION", "ROTATION", "SCALE", "COLOR"].index(ep.target))
         put("Axis", tuple(ep.axis))
+        put("Loop", ep.loop); put("Loop Frame", ep.loop_frame)
         put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
         put("Scale", tuple(ep.scale))
     if t == "SHADER":

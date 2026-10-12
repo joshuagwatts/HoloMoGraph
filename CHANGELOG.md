@@ -208,3 +208,11 @@ PSR for all effectors (user: "should have access to the PSR for all of these eff
   controls in their UI. The PSR is added on top of the effector's specific behavior.
 - SHADER has the UI but PSR wiring needs investigation (inputs exist, defaults correct).
 - 12/12 tests pass.
+
+## v1.2.17 — 2026-10-12
+
+Formula loop (user: "checkbox that added a loop point on a specified frame"):
+- Formula effector now has "Loop" checkbox + "Loop Frame" (default 60).
+- When enabled, the wave phase completes exactly 2π over the loop duration,
+  creating a seamless loop. Verified: frame 31 matches frame 1 exactly.
+- 12/12 tests pass.

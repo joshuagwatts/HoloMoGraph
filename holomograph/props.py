@@ -191,6 +191,10 @@ class HMG_EffectorProps(bpy.types.PropertyGroup):
     frequency: bpy.props.FloatProperty(name="Frequency", default=1.0, update=_upd)
     phase: bpy.props.FloatProperty(name="Phase", default=0.0, update=_upd)
     speed: bpy.props.FloatProperty(name="Speed", default=1.0, update=_upd)
+    loop: bpy.props.BoolProperty(name="Loop", default=False, update=_upd,
+        description="Loop the animation seamlessly at the specified frame")
+    loop_frame: bpy.props.IntProperty(name="Loop Frame", default=60, min=1, update=_upd,
+        description="Frame at which the loop completes")
     target: bpy.props.EnumProperty(name="Target",
                                    items=[("POSITION", "Position", ""), ("ROTATION", "Rotation", ""),
                                           ("SCALE", "Scale", ""), ("COLOR", "Color", "")],
