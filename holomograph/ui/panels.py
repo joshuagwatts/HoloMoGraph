@@ -173,6 +173,10 @@ class HMG_PT_effector(bpy.types.Panel):
             box.prop(ep, "rotation_amt")
             box.prop(ep, "scale_amt")
             box.prop(ep, "use_color")
+            box.separator()
+            box.prop(ep, "random_animate")
+            if ep.random_animate:
+                box.prop(ep, "random_speed")
             if ep.use_color:
                 box.prop(ep, "color_a")
                 box.prop(ep, "color_b")

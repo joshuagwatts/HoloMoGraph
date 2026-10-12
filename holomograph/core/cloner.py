@@ -424,7 +424,8 @@ def _fx_params(eff) -> dict:
         d.update(seed=p.seed, position_amt=tuple(p.position_amt),
                  rotation_amt=tuple(p.rotation_amt), scale_amt=tuple(p.scale_amt),
                  color_a=tuple(p.color_a), color_b=tuple(p.color_b),
-                 use_color=p.use_color)
+                 use_color=p.use_color, random_animate=p.random_animate,
+                 random_speed=p.random_speed)
     elif t == "STEP":
         d.update(steps=p.steps, position=tuple(p.position),
                  rotation=tuple(p.rotation), scale=tuple(p.scale))
@@ -716,7 +717,8 @@ def _fx_driver_map(eff_type):
         base += [("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
     if eff_type == "RANDOM":
         base += [("position_amt", "Position Amt"), ("rotation_amt", "Rotation Amt"),
-                 ("scale_amt", "Scale Amt")]
+                 ("scale_amt", "Scale Amt"), ("random_animate", "Random Animate"),
+                 ("random_speed", "Random Speed")]
     if eff_type == "FORMULA":
         base += [("amplitude", "Amplitude"), ("frequency", "Frequency"),
                  ("phase", "Phase"), ("speed", "Speed")]
@@ -779,6 +781,7 @@ def _set_fx_params(fn, eff, fo):
         put("Time Offset", ep.time_offset)
     if t == "RANDOM":
         put("Seed", ep.seed); put("Position Amt", tuple(ep.position_amt))
+        put("Random Animate", ep.random_animate); put("Random Speed", ep.random_speed)
         put("Rotation Amt", tuple(ep.rotation_amt)); put("Scale Amt", tuple(ep.scale_amt))
         put("Color A", tuple(ep.color_a)); put("Color B", tuple(ep.color_b))
         put("Use Color", ep.use_color)

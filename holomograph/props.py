@@ -174,6 +174,12 @@ class HMG_EffectorProps(bpy.types.PropertyGroup):
     color_b: bpy.props.FloatVectorProperty(name="Color B", default=(1, 0.4, 0.1, 1),
                                            size=4, subtype="COLOR", update=_upd)
     use_color: bpy.props.BoolProperty(name="Randomize Color", default=False, update=_upd)
+    random_animate: bpy.props.BoolProperty(
+        name="Animated", default=False, update=_upd,
+        description="Random values change over time")
+    random_speed: bpy.props.FloatProperty(
+        name="Speed", default=1.0, min=0.01, update=_upd,
+        description="New random values per second")
     # step
     steps: bpy.props.IntProperty(name="Steps", default=5, min=2, update=_upd)
     # formula

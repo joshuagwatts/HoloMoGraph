@@ -215,6 +215,8 @@ def build_random(name, P, falloff_obj):
     iface_in(tree, "Color A", "RGBA", default=P.get("color_a", (1, 1, 1, 1)))
     iface_in(tree, "Color B", "RGBA", default=P.get("color_b", (1, 0.4, 0.1, 1)))
     iface_in(tree, "Use Color", "BOOLEAN", default=P.get("use_color", False))
+    iface_in(tree, "Random Animate", "BOOLEAN", default=P.get("random_animate", False))
+    iface_in(tree, "Random Speed", "FLOAT", default=P.get("random_speed", 1.0), min_value=0.01)
     for pname, stype, default in (("Shape", "INT", 3), ("Size", "VECTOR", (2, 2, 2)),
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
@@ -226,6 +228,17 @@ def build_random(name, P, falloff_obj):
                    math(tree, "MULTIPLY", idx.outputs["Index"],
                         value(tree, 15731.0, (200, -420)).outputs[0], location=(350, -360)).outputs[0],
                    gin.outputs["Seed"], location=(500, -360)).outputs[0]
+    # Animated: add floor(time * speed) to seed
+    stime_r = add_node(tree, "GeometryNodeInputSceneTime", (200, -550))
+    time_steps = math(tree, "FLOOR",
+                      math(tree, "MULTIPLY", stime_r.outputs["Seconds"],
+                           gin.outputs["Random Speed"],
+                           location=(350, -550)).outputs[0],
+                      location=(500, -550)).outputs[0]
+    anim_seed = math(tree, "ADD", seed_id, time_steps,
+                     location=(650, -550)).outputs[0]
+    seed_id = switch(tree, gin.outputs["Random Animate"], seed_id, anim_seed,
+                     location=(800, -550)).outputs[0]
     one_v = combine_xyz(tree, value(tree, 1.0).outputs[0], value(tree, 1.0).outputs[0],
                         value(tree, 1.0).outputs[0]).outputs["Vector"]
     neg_one_v = combine_xyz(tree, value(tree, -1.0).outputs[0], value(tree, -1.0).outputs[0],

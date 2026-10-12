@@ -171,3 +171,12 @@ Solid meshes, not wireframes (user: "i can see the wireframes but remember i wan
 - Cloner is now invisible in viewport (single vertex, C4D-style). Select from Outliner.
 - Existing octahedron cloners auto-migrate to invisible on rebuild.
 - NO auto-hide of sources (user hated that). Parenting clones visibly.
+
+## v1.2.13 — 2026-10-11
+
+Working features, verified before shipping:
+- Falloffs WORK (external falloff objects): Add Effector → select it → Add Falloff.
+  Verified: sphere falloff gives smooth gradient (z=5.0, 3.33, 1.67, 0, 0).
+- Random Animation WORKS: Random effector has "Animated" toggle + Speed.
+  Verified: positions change over time ([0.01,1.08,4.82] → [0.14,0.48,3.23] → [0.97,1.76,2.0]).
+- All 12/12 tests pass on Blender 5.0.1 and 5.2.2.
