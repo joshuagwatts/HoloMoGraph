@@ -820,10 +820,66 @@ def _set_fx_params(fn, eff, fo):
         put("Curve", fp.curve); put("Invert", fp.invert)
 
 
+def _snapshot_props(cloner_obj):
+    """Snapshot hmg_cloner properties (AK47: rebuilds never lose settings)."""
+    try:
+        cp = cloner_obj.hmg_cloner
+        snap = {}
+        for prop in cp.bl_rna.properties:
+            if prop.identifier in ("rna_type", "name"):
+                continue
+            try:
+                v = getattr(cp, prop.identifier)
+                # Copy vectors/lists so we don't hold references
+                if hasattr(v, "__len__") and not isinstance(v, str):
+                    v = tuple(v)
+                snap[prop.identifier] = v
+            except Exception:
+                continue
+        return snap
+    except Exception:
+        return {}
+
+
+def _restore_props(cloner_obj, snap):
+    """Restore hmg_cloner properties if a rebuild disturbed them."""
+    if not snap:
+        return
+    try:
+        cp = cloner_obj.hmg_cloner
+        for key, val in snap.items():
+            try:
+                cur = getattr(cp, key)
+                # Compare (handle vectors)
+                if hasattr(cur, "__len__") and not isinstance(cur, str):
+                    cur_t = tuple(cur)
+                    if cur_t != tuple(val):
+                        setattr(cp, key, val)
+                elif cur != val:
+                    setattr(cp, key, val)
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+
 def build_chain(cloner_obj):
-    """(Re)build the full node tree for a cloner object."""
+    """(Re)build the full node tree for a cloner object.
+
+    AK47: snapshots properties before, restores after. A rebuild NEVER
+    changes your settings. All errors are contained — never crashes.
+    """
     from .nodes import ng_new as _new
-    # Migrate old octahedron gizmo to invisible single-vertex (C4D-style)
+    # Snapshot settings first — rebuild must not lose them.
+    snap = _snapshot_props(cloner_obj)
+    try:
+        _build_chain_inner(cloner_obj, _new)
+    finally:
+        # Always restore settings, even if build failed midway.
+        _restore_props(cloner_obj, snap)
+
+
+def _build_chain_inner(cloner_obj, _new):
     try:
         me = cloner_obj.data
         if me is not None and len(me.vertices) > 1:

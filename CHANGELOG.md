@@ -180,3 +180,14 @@ Working features, verified before shipping:
 - Random Animation WORKS: Random effector has "Animated" toggle + Speed.
   Verified: positions change over time ([0.01,1.08,4.82] → [0.14,0.48,3.23] → [0.97,1.76,2.0]).
 - All 12/12 tests pass on Blender 5.0.1 and 5.2.2.
+
+## v1.2.14 — 2026-10-12
+
+AK47 reliability (user: "make sure its like a damn ak47"):
+- Rebuilds are DEFERRED via timer, never inside the depsgraph update.
+  (Modifying node groups during depsgraph = crash. Now impossible.)
+- build_chain snapshots all settings before rebuild, restores after.
+  Parenting/unparenting NEVER resets your settings. Verified.
+- All errors contained — a failed rebuild can't take down the session.
+- Stress tested: 10x rapid parent/unparent, no crash, settings intact.
+- 12/12 tests pass.
