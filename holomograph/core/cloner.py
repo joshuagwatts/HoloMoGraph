@@ -424,8 +424,7 @@ def _fx_params(eff) -> dict:
         d.update(seed=p.seed, position_amt=tuple(p.position_amt),
                  rotation_amt=tuple(p.rotation_amt), scale_amt=tuple(p.scale_amt),
                  color_a=tuple(p.color_a), color_b=tuple(p.color_b),
-                 use_color=p.use_color, random_animate=p.random_animate,
-                 random_speed=p.random_speed)
+                 use_color=p.use_color)
     elif t == "STEP":
         d.update(steps=p.steps, position=tuple(p.position),
                  rotation=tuple(p.rotation), scale=tuple(p.scale))
@@ -449,15 +448,6 @@ def _fx_params(eff) -> dict:
         d.update(offset=p.time_offset, stagger=p.time_stagger)
     elif t == "SPLINE":
         d.update(amount=p.spline_amount, align=p.spline_align)
-    # Built-in proximity falloff (C4D-style)
-    d.update(use_builtin_falloff=p.use_builtin_falloff,
-             prox_shape=["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE",
-                         "CYLINDER", "TUBE", "CONE", "TORUS"].index(p.prox_shape),
-             prox_size=tuple(p.prox_size), prox_inner=p.prox_inner,
-             prox_curve=p.prox_curve, prox_invert=p.prox_invert)
-    # Built-in time animation
-    d.update(use_time_anim=p.use_time_anim,
-             time_speed=p.time_speed, time_phase=p.time_phase)
     return d
 
 
@@ -726,8 +716,7 @@ def _fx_driver_map(eff_type):
         base += [("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
     if eff_type == "RANDOM":
         base += [("position_amt", "Position Amt"), ("rotation_amt", "Rotation Amt"),
-                 ("scale_amt", "Scale Amt"), ("random_animate", "Random Animate"),
-                 ("random_speed", "Random Speed")]
+                 ("scale_amt", "Scale Amt")]
     if eff_type == "FORMULA":
         base += [("amplitude", "Amplitude"), ("frequency", "Frequency"),
                  ("phase", "Phase"), ("speed", "Speed")]
@@ -735,15 +724,6 @@ def _fx_driver_map(eff_type):
         base += [("delay", "Delay"), ("stiffness", "Stiffness"), ("damping", "Damping")]
     if eff_type == "TIME":
         base += [("time_offset", "Offset"), ("time_stagger", "Stagger")]
-    # Built-in proximity and time anim (all effectors)
-    base += [("use_builtin_falloff", "Use Prox Falloff"),
-             ("prox_size", "Prox Size"),
-             ("prox_inner", "Prox Inner"),
-             ("prox_curve", "Prox Curve"),
-             ("prox_invert", "Prox Invert"),
-             ("use_time_anim", "Use Time Anim"),
-             ("time_speed", "Time Speed"),
-             ("time_phase", "Time Phase")]
     return base
 
 
@@ -799,7 +779,6 @@ def _set_fx_params(fn, eff, fo):
         put("Time Offset", ep.time_offset)
     if t == "RANDOM":
         put("Seed", ep.seed); put("Position Amt", tuple(ep.position_amt))
-        put("Random Animate", ep.random_animate); put("Random Speed", ep.random_speed)
         put("Rotation Amt", tuple(ep.rotation_amt)); put("Scale Amt", tuple(ep.scale_amt))
         put("Color A", tuple(ep.color_a)); put("Color B", tuple(ep.color_b))
         put("Use Color", ep.use_color)
@@ -830,15 +809,6 @@ def _set_fx_params(fn, eff, fo):
         put("Align", ep.spline_align)
     if t == "TIME":
         put("Offset", ep.time_offset); put("Stagger", ep.time_stagger)
-    # Built-in proximity falloff (C4D-style)
-    put("Use Prox Falloff", ep.use_builtin_falloff)
-    put("Prox Shape", ["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE",
-                       "CYLINDER", "TUBE", "CONE", "TORUS"].index(ep.prox_shape))
-    put("Prox Size", tuple(ep.prox_size)); put("Prox Inner", ep.prox_inner)
-    put("Prox Curve", ep.prox_curve); put("Prox Invert", ep.prox_invert)
-    # Built-in time animation
-    put("Use Time Anim", ep.use_time_anim)
-    put("Time Speed", ep.time_speed); put("Time Phase", ep.time_phase)
     if fo is not None:
         fp = fo.hmg_falloff
         put("Shape", ["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE",
@@ -850,18 +820,6 @@ def _set_fx_params(fn, eff, fo):
 def build_chain(cloner_obj):
     """(Re)build the full node tree for a cloner object."""
     from .nodes import ng_new as _new
-    # Migrate old octahedron gizmo to invisible single-vertex (C4D-style)
-    try:
-        me = cloner_obj.data
-        if me is not None and len(me.vertices) > 1:
-            me.clear_geometry()
-            me.from_pydata([(0, 0, 0)], [], [])
-            me.update()
-            # Remove wireframe display if it was set
-            if cloner_obj.display_type == "WIRE":
-                cloner_obj.display_type = "TEXTURED"
-    except Exception:
-        pass
     tree = _new(chain_group_name(cloner_obj))
     iface_out(tree, "Geometry", "GEOMETRY")
     gin, gou = io_nodes(tree)
@@ -983,18 +941,19 @@ def _reset_modifier_inputs(cloner_obj):
 
 
 def new_cloner_object(context, name):
-    """Create the cloner object. A single-vertex mesh (not an empty)
-    because Blender 5.0 cannot put modifiers on empties. The vertex is
-    invisible in the viewport — like C4D, you only see the cloned meshes.
-    Select the cloner from the Outliner (like C4D's Object Manager).
-    The modifier output replaces the mesh entirely."""
+    """Create the cloner object. A wireframe octahedron mesh (not an empty)
+    because Blender 5.0 cannot put modifiers on empties. The modifier output
+    replaces the mesh entirely, so the gizmo never renders — it's just a
+    visible, selectable handle in the viewport, like a C4D cloner icon."""
     me = bpy.data.meshes.new(f"{name} Mesh")
-    # Single vertex at origin — invisible, just a host for the modifier
-    me.from_pydata([(0, 0, 0)], [], [])
+    # Octahedron: 6 verts, 8 triangular faces (wireframe gizmo)
+    verts = [(0, 0, 1), (0, 0, -1), (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0)]
+    faces = [(0, 2, 4), (0, 4, 3), (0, 3, 5), (0, 5, 2),
+             (1, 4, 2), (1, 3, 4), (1, 5, 3), (1, 2, 5)]
+    me.from_pydata(verts, [], faces)
     me.update()
     obj = bpy.data.objects.new(name, me)
-    # Don't display as wireframe — the vertex is invisible anyway
-    # (C4D-style: cloner itself is invisible, only clones show)
+    obj.display_type = "WIRE"
     context.scene.collection.objects.link(obj)
     context.view_layer.objects.active = obj
     obj.select_set(True)

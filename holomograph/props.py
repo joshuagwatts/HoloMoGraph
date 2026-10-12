@@ -149,28 +149,6 @@ class HMG_EffectorProps(bpy.types.PropertyGroup):
     order: bpy.props.IntProperty(name="Order", default=0, update=_upd)
     falloff: bpy.props.PointerProperty(name="Falloff", type=bpy.types.Object,
                                        update=_upd)
-    # Built-in proximity/falloff (C4D-style, no separate object needed).
-    # If an external Falloff object is linked above, it wins.
-    use_builtin_falloff: bpy.props.BoolProperty(
-        name="Use Proximity Falloff", default=False, update=_upd,
-        description="Enable built-in distance-based falloff (proximity)")
-    prox_shape: bpy.props.EnumProperty(name="Shape", items=FALLOFF_SHAPES,
-                                       default="SPHERE", update=_upd)
-    prox_size: bpy.props.FloatVectorProperty(name="Size", default=(2.0, 2.0, 2.0),
-                                             subtype="XYZ", update=_upd)
-    prox_inner: bpy.props.FloatProperty(name="Inner", default=0.0,
-                                        min=0.0, max=0.99, update=_upd)
-    prox_curve: bpy.props.FloatProperty(name="Curve", default=0.0,
-                                        min=-0.9, max=3.0, update=_upd)
-    prox_invert: bpy.props.BoolProperty(name="Invert", default=False, update=_upd)
-    # Built-in time animation (C4D-style: every effector animatable over time)
-    use_time_anim: bpy.props.BoolProperty(
-        name="Animate Over Time", default=False, update=_upd,
-        description="Modulate strength automatically over time")
-    time_speed: bpy.props.FloatProperty(name="Speed", default=1.0, update=_upd,
-                                        description="Oscillations per second")
-    time_phase: bpy.props.FloatProperty(name="Phase", default=0.0, update=_upd,
-                                        description="Phase offset in cycles")
     # plain / sound
     position: bpy.props.FloatVectorProperty(name="Position", default=(0, 0, 0),
                                             subtype="TRANSLATION", update=_upd)
@@ -196,13 +174,6 @@ class HMG_EffectorProps(bpy.types.PropertyGroup):
     color_b: bpy.props.FloatVectorProperty(name="Color B", default=(1, 0.4, 0.1, 1),
                                            size=4, subtype="COLOR", update=_upd)
     use_color: bpy.props.BoolProperty(name="Randomize Color", default=False, update=_upd)
-    # Animated random (time-varying seed)
-    random_animate: bpy.props.BoolProperty(
-        name="Animated Random", default=False, update=_upd,
-        description="Random values change over time")
-    random_speed: bpy.props.FloatProperty(
-        name="Random Speed", default=1.0, min=0.01, update=_upd,
-        description="New random values per second")
     # step
     steps: bpy.props.IntProperty(name="Steps", default=5, min=2, update=_upd)
     # formula

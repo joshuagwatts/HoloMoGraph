@@ -156,3 +156,11 @@ Fix parenting workflow:
 - The handler now unhides any sources it previously auto-hid.
 - Parenting a cube to the cloner clones it (verified working). If auto-rebuild
   misses, use the "Rebuild Cloner" button in the panel.
+
+## v1.2.11 — 2026-10-11
+
+Clean revert to v1.2.3 (user: "3 tries and ur out, go back to the one that worked"):
+- Parenting a cube to the cloner clones it (verified: 25 clones).
+- Basic effectors work. No auto-hide, no built-in falloff experiments.
+- Nesting effectors: parked for later, per user ("we will figure out the nesting
+  effectors after u fix the main issue").

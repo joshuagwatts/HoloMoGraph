@@ -64,15 +64,6 @@ def on_depsgraph_update(scene, depsgraph):
                 build_chain(cl)
             except Exception:
                 pass
-            # Unhide any sources we previously auto-hid (auto-hide removed —
-            # user wants to see the source; cloning the clones is good).
-            try:
-                for obj in bpy.data.objects:
-                    if getattr(obj, "_hmg_hidden_source", False):
-                        obj.hide_viewport = False
-                        obj["_hmg_hidden_source"] = False
-            except Exception:
-                pass
     finally:
         _rebuilding = False
 
