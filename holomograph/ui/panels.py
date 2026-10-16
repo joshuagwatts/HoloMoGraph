@@ -157,6 +157,13 @@ class HMG_PT_effector(bpy.types.Panel):
         layout.prop(ep, "strength")
         layout.prop(ep, "order")
         layout.prop(ep, "falloff")
+        layout.prop(ep, "use_builtin")
+        if ep.use_builtin:
+            box2 = layout.box()
+            box2.label(text="Built-in Proximity:")
+            box2.prop(ep, "bf_shape")
+            box2.prop(ep, "bf_size")
+            box2.prop(ep, "bf_inner")
         t = ep.eff_type
         box = layout.box()
         if t in ("PLAIN", "SOUND", "STEP"):

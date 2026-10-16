@@ -149,6 +149,13 @@ class HMG_EffectorProps(bpy.types.PropertyGroup):
     order: bpy.props.IntProperty(name="Order", default=0, update=_upd)
     falloff: bpy.props.PointerProperty(name="Falloff", type=bpy.types.Object,
                                        update=_upd)
+    use_builtin: bpy.props.BoolProperty(name="Built-in Falloff", default=False, update=_upd,
+        description="Use built-in proximity falloff instead of external object")
+    bf_shape: bpy.props.EnumProperty(name="Shape",
+        items=[("SPHERE", "Sphere", ""), ("BOX", "Box", ""), ("CYLINDER", "Cylinder", "")],
+        default="SPHERE", update=_upd)
+    bf_size: bpy.props.FloatVectorProperty(name="Size", default=(3.0, 3.0, 3.0), update=_upd)
+    bf_inner: bpy.props.FloatProperty(name="Inner", default=0.0, min=0.0, max=1.0, update=_upd)
     # plain / sound
     position: bpy.props.FloatVectorProperty(name="Position", default=(0, 0, 2.0),
                                             subtype="TRANSLATION", update=_upd)
@@ -185,6 +192,8 @@ class HMG_EffectorProps(bpy.types.PropertyGroup):
     # formula
     formula_mode: bpy.props.EnumProperty(name="Function",
                                          items=[("SINE", "Sine", ""), ("COSINE", "Cosine", ""),
+                                                ("TRIANGLE", "Triangle", ""), ("SQUARE", "Square", ""),
+                                                ("SAWTOOTH", "Sawtooth", ""),
                                                 ("LINEAR", "Linear", ""), ("NOISE", "Noise", "")],
                                          default="SINE", update=_upd)
     amplitude: bpy.props.FloatProperty(name="Amplitude", default=1.0, update=_upd)

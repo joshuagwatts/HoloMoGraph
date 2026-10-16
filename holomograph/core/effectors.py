@@ -57,15 +57,29 @@ def _base(name, falloff_obj, cloner_obj):
     return h
 
 
-def _apply_falloff(h, falloff_obj):
-    """Run the falloff subgroup; return effective weight socket."""
+def _apply_falloff(h, falloff_obj, P=None):
+    """Run the falloff subgroup; return effective weight socket.
+    If falloff_obj is None but P has use_builtin, use built-in proximity."""
     tree, gin = h["tree"], h["gin"]
-    if falloff_obj is None:
+    use_builtin = P.get("use_builtin", False) if P else False
+    if falloff_obj is None and not use_builtin:
         return gin.outputs["Strength"]
     fg = group_node(tree, _ensure_falloff(), location=(200, 200))
     link(tree, h["geo"], fg.inputs["Geometry"])
     link(tree, gin.outputs["Cloner"], fg.inputs["Cloner"])
-    link(tree, gin.outputs["Falloff"], fg.inputs["Falloff"])
+    if use_builtin and falloff_obj is None:
+        # Built-in: center at cloner origin, use BF params for shape/size
+        # Link Cloner as Falloff (center at origin)
+        try:
+            link(tree, gin.outputs["Cloner"], fg.inputs["Falloff"])
+        except Exception:
+            pass
+        # Override Shape/Size/Inner with built-in values via interface
+        # The interface inputs already exist; we set their defaults in _fx_params
+        # Here we just link them (they're already linked below)
+        pass
+    else:
+        link(tree, gin.outputs["Falloff"], fg.inputs["Falloff"])
     for pname in ("Shape", "Size", "Inner", "Curve", "Invert"):
         src = fg.inputs[pname]
         try:
@@ -210,7 +224,7 @@ def build_plain(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
     _apply_transforms(h, w, gin.outputs["Position"], gin.outputs["Rotation"],
                       gin.outputs["Scale"], gin.outputs["Color"],
                       gin.outputs["Visibility"], gin.outputs["Time Offset"])
@@ -233,7 +247,7 @@ def build_random(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
 
     idx = add_node(tree, "GeometryNodeInputIndex", (200, -300))
     seed_id = math(tree, "ADD",
@@ -298,7 +312,7 @@ def build_step(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
     t = _idx_norm(h)
     steps = gin.outputs["Steps"]
     stepped = math(tree, "DIVIDE",
@@ -316,8 +330,8 @@ def build_formula(name, P, falloff_obj):
     h = _base(name, falloff_obj, None)
     tree, gin = h["tree"], h["gin"]
     iface_in(tree, "Mode", "INT", default=P.get("formula_mode", 0),
-             min_value=0, max_value=3,
-             description="0 Sine 1 Cosine 2 Linear 3 Noise")
+             min_value=0, max_value=6,
+             description="0 Sine 1 Cosine 2 Triangle 3 Square 4 Sawtooth 5 Linear 6 Noise")
     iface_in(tree, "Amplitude", "FLOAT", default=P.get("amplitude", 1.0))
     iface_in(tree, "Frequency", "FLOAT", default=P.get("frequency", 1.0))
     iface_in(tree, "Phase", "FLOAT", default=P.get("phase", 0.0))
@@ -331,7 +345,7 @@ def build_formula(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
 
     t = _idx_norm(h)
     stime = add_node(tree, "GeometryNodeInputSceneTime", (200, -500))
@@ -353,12 +367,41 @@ def build_formula(name, P, falloff_obj):
                  time_term, location=(1100, -350))
     s_sin = math(tree, "SINE", phase.outputs[0], location=(1250, -200))
     s_cos = math(tree, "COSINE", phase.outputs[0], location=(1250, -350))
+    # triangle: 2*abs(2*(p/2pi - floor(p/2pi + 0.5))) - 1
+    # simplified: asin(sin(p)) * (2/pi)
+    s_tri = math(tree, "MULTIPLY",
+                 math(tree, "ARCSINE", s_sin.outputs[0], location=(1250, -420)).outputs[0],
+                 value(tree, 0.636619772, (1250, -460)).outputs[0],
+                 location=(1400, -420)).outputs[0]
+    # square: sign(sin(p)) -> 1 or -1
+    s_sq = math(tree, "SUBTRACT",
+                math(tree, "MULTIPLY",
+                       compare(tree, s_sin.outputs[0], value(tree, 0.0, (1250, -540)).outputs[0],
+                               operation="GREATER_THAN", location=(1400, -540)).outputs[0],
+                       value(tree, 2.0, (1400, -580)).outputs[0],
+                       location=(1550, -540)).outputs[0],
+                value(tree, 1.0, (1550, -580)).outputs[0],
+                location=(1700, -540)).outputs[0]
+    # sawtooth: ((p / 2pi) % 1) * 2 - 1
+    s_saw = math(tree, "SUBTRACT",
+                 math(tree, "MULTIPLY",
+                        math(tree, "MODULO",
+                               math(tree, "DIVIDE", phase.outputs[0],
+                                      value(tree, 6.283185307, (1250, -660)).outputs[0],
+                                      location=(1400, -660)).outputs[0],
+                               value(tree, 1.0, (1400, -700)).outputs[0],
+                               location=(1550, -660)).outputs[0],
+                        value(tree, 2.0, (1550, -700)).outputs[0],
+                        location=(1700, -660)).outputs[0],
+                 value(tree, 1.0, (1700, -700)).outputs[0],
+                 location=(1850, -660)).outputs[0]
     # noise: white noise on index
     wn = add_node(tree, "ShaderNodeTexWhiteNoise", (1250, -500))
     link(tree, _to_vec(tree, t, (1100, -550)), wn.inputs["Vector"])
     s_lin = t
     val = index_switch(tree, gin.outputs["Mode"],
-                       [s_sin.outputs[0], s_cos.outputs[0], s_lin, wn.outputs["Value"]],
+                       [s_sin.outputs[0], s_cos.outputs[0], s_tri, s_sq,
+                        s_saw, s_lin, wn.outputs["Value"]],
                        location=(1400, -300)).outputs[0]
     val = math(tree, "MULTIPLY", val, gin.outputs["Amplitude"], location=(1550, -300)).outputs[0]
     vec = vmath(tree, "MULTIPLY", _to_vec(tree, val, (1550, -450)), gin.outputs["Axis"],
@@ -407,7 +450,7 @@ def build_shader(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
 
     pos = add_node(tree, "GeometryNodeInputPosition", (200, -300))
     uv = vmath(tree, "ADD",
@@ -468,7 +511,7 @@ def build_delay(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
     geo = h["geo"]
 
     sim_in = add_node(tree, "GeometryNodeSimulationInput", (900, 200))
@@ -576,7 +619,7 @@ def build_push_apart(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
 
     pos = add_node(tree, "GeometryNodeInputPosition", (700, 200))
     oinfo = object_info(tree, None, (850, 200))  # RELATIVE: cloner-space
@@ -615,7 +658,7 @@ def build_target(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
 
     pos = add_node(tree, "GeometryNodeInputPosition", (700, 200))
     # Object Info with RELATIVE space gives the target in cloner-local space,
@@ -654,7 +697,7 @@ def build_spline(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
 
     # RELATIVE object info: spline geometry arrives in cloner-local space,
     # so clone positions compare directly with no matrix juggling.
@@ -716,7 +759,7 @@ def build_time(name, P, falloff_obj):
                                   ("Inner", "FLOAT", 0.0), ("Curve", "FLOAT", 0.0),
                                   ("Invert", "BOOLEAN", False)):
         iface_in(tree, pname, stype, default=default)
-    w = _apply_falloff(h, falloff_obj)
+    w = _apply_falloff(h, falloff_obj, P)
     idx = add_node(tree, "GeometryNodeInputIndex", (700, -300))
     t = math(tree, "MULTIPLY", w,
              math(tree, "ADD", gin.outputs["Offset"],

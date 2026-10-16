@@ -416,6 +416,13 @@ def _fx_params(eff) -> dict:
     p = eff.hmg_effector
     t = p.eff_type
     d: dict = {}
+    # Built-in falloff (proximity) - available on all effectors
+    try:
+        bf_shape_idx = ["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE", "CYLINDER", "TUBE", "CONE", "TORUS"].index(p.bf_shape)
+    except:
+        bf_shape_idx = 3
+    d.update(use_builtin=p.use_builtin, bf_shape=bf_shape_idx,
+             bf_size=tuple(p.bf_size), bf_inner=p.bf_inner)
     if t in ("PLAIN", "SOUND"):
         d.update(position=tuple(p.position), rotation=tuple(p.rotation),
                  scale=tuple(p.scale), color=tuple(p.color),
@@ -430,7 +437,7 @@ def _fx_params(eff) -> dict:
         d.update(steps=p.steps, position=tuple(p.position),
                  rotation=tuple(p.rotation), scale=tuple(p.scale))
     elif t == "FORMULA":
-        d.update(formula_mode=["SINE", "COSINE", "LINEAR", "NOISE"].index(p.formula_mode),
+        d.update(formula_mode=["SINE", "COSINE", "TRIANGLE", "SQUARE", "SAWTOOTH", "LINEAR", "NOISE"].index(p.formula_mode),
                  amplitude=p.amplitude, frequency=p.frequency, phase=p.phase,
                  speed=p.speed, loop=p.loop, loop_frame=p.loop_frame,
                  target=["POSITION", "ROTATION", "SCALE", "COLOR"].index(p.target),
@@ -753,6 +760,9 @@ def _fx_driver_map(eff_type):
     if eff_type == "TIME":
         base += [("time_offset", "Offset"), ("time_stagger", "Stagger"),
                  ("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
+    # Built-in falloff on all
+    base += [("use_builtin", "Built-in Falloff"), ("bf_shape", "BF Shape"),
+             ("bf_size", "BF Size"), ("bf_inner", "BF Inner")]
     return base
 
 
@@ -815,7 +825,7 @@ def _set_fx_params(fn, eff, fo):
     if t == "STEP":
         put("Steps", ep.steps)
     if t == "FORMULA":
-        put("Mode", ["SINE", "COSINE", "LINEAR", "NOISE"].index(ep.formula_mode))
+        put("Mode", ["SINE", "COSINE", "TRIANGLE", "SQUARE", "SAWTOOTH", "LINEAR", "NOISE"].index(ep.formula_mode))
         put("Amplitude", ep.amplitude); put("Frequency", ep.frequency)
         put("Phase", ep.phase); put("Speed", ep.speed)
         put("Target", ["POSITION", "ROTATION", "SCALE", "COLOR"].index(ep.target))
@@ -854,6 +864,15 @@ def _set_fx_params(fn, eff, fo):
         put("Offset", ep.time_offset); put("Stagger", ep.time_stagger)
         put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
         put("Scale", tuple(ep.scale))
+    # Built-in falloff: override Shape/Size/Inner with BF params
+    if ep.use_builtin:
+        try:
+            bf_shape_idx = ["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE", "CYLINDER", "TUBE", "CONE", "TORUS"].index(ep.bf_shape)
+        except:
+            bf_shape_idx = 3
+        put("Shape", bf_shape_idx)
+        put("Size", tuple(ep.bf_size))
+        put("Inner", ep.bf_inner)
     if fo is not None:
         fp = fo.hmg_falloff
         put("Shape", ["INFINITE", "LINEAR", "BOX", "SPHERE", "CAPSULE",

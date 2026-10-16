@@ -216,3 +216,12 @@ Formula loop (user: "checkbox that added a loop point on a specified frame"):
 - When enabled, the wave phase completes exactly 2π over the loop duration,
   creating a seamless loop. Verified: frame 31 matches frame 1 exactly.
 - 12/12 tests pass.
+
+## v1.2.18 — 2026-10-16
+
+- Formula: 7 waveforms now (Sine, Cosine, Triangle, Square, Sawtooth, Linear, Noise).
+  All verified working.
+- Formula Loop (from v1.2.17): seamless looping verified.
+- Push Apart: verified working (clears center).
+- Note: Built-in proximity falloff UI added but needs wiring fixes. External
+  falloff objects work reliably — use Add Falloff on the effector.
