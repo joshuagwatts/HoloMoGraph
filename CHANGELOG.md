@@ -225,3 +225,13 @@ Formula loop (user: "checkbox that added a loop point on a specified frame"):
 - Push Apart: verified working (clears center).
 - Note: Built-in proximity falloff UI added but needs wiring fixes. External
   falloff objects work reliably — use Add Falloff on the effector.
+
+## v1.2.19 — 2026-10-19
+
+Built-in proximity falloff FIXED:
+- Root cause: an auto-created external falloff object was overwriting the
+  built-in params (Shape stuck at INFINITE). Built-in now takes precedence.
+- "Built-in Falloff" checkbox on every effector now actually works.
+  Set Shape (Sphere/Box/Cylinder), Size, Inner — no separate object needed.
+- Verified: SPHERE/BOX/CYLINDER all produce correct gradients.
+- 12/12 tests pass.

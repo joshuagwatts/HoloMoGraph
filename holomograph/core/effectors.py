@@ -59,7 +59,8 @@ def _base(name, falloff_obj, cloner_obj):
 
 def _apply_falloff(h, falloff_obj, P=None):
     """Run the falloff subgroup; return effective weight socket.
-    If falloff_obj is None but P has use_builtin, use built-in proximity."""
+    If falloff_obj is None but P has use_builtin, use built-in proximity
+    (Falloff input is set to cloner_obj in build_chain)."""
     tree, gin = h["tree"], h["gin"]
     use_builtin = P.get("use_builtin", False) if P else False
     if falloff_obj is None and not use_builtin:
@@ -67,19 +68,7 @@ def _apply_falloff(h, falloff_obj, P=None):
     fg = group_node(tree, _ensure_falloff(), location=(200, 200))
     link(tree, h["geo"], fg.inputs["Geometry"])
     link(tree, gin.outputs["Cloner"], fg.inputs["Cloner"])
-    if use_builtin and falloff_obj is None:
-        # Built-in: center at cloner origin, use BF params for shape/size
-        # Link Cloner as Falloff (center at origin)
-        try:
-            link(tree, gin.outputs["Cloner"], fg.inputs["Falloff"])
-        except Exception:
-            pass
-        # Override Shape/Size/Inner with built-in values via interface
-        # The interface inputs already exist; we set their defaults in _fx_params
-        # Here we just link them (they're already linked below)
-        pass
-    else:
-        link(tree, gin.outputs["Falloff"], fg.inputs["Falloff"])
+    link(tree, gin.outputs["Falloff"], fg.inputs["Falloff"])
     for pname in ("Shape", "Size", "Inner", "Curve", "Invert"):
         src = fg.inputs[pname]
         try:

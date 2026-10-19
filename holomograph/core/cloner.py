@@ -476,6 +476,9 @@ def _fx_params(eff) -> dict:
 
 def _falloff_of(eff):
     p = eff.hmg_effector
+    # Built-in takes precedence over external
+    if p.use_builtin:
+        return None
     fo = p.falloff
     if fo is None:
         for ch in eff.children:
@@ -719,6 +722,9 @@ def _append_pipeline(tree, cloner_obj, x):
         fn.inputs["Cloner"].default_value = cloner_obj
         if fo is not None:
             fn.inputs["Falloff"].default_value = fo
+        elif ep.use_builtin:
+            # Built-in falloff: center at cloner origin
+            fn.inputs["Falloff"].default_value = cloner_obj
         fn.inputs["Strength"].default_value = ep.strength
         link(tree, count, fn.inputs["Count"])
         fn.inputs["Weight Attr"].default_value = f"hmg_w_{sanitize(eff.name)}"
