@@ -27,8 +27,16 @@ class HMG_OT_add_cloner(bpy.types.Operator):
 
     def execute(self, context):
         from ..core.cloner import build_chain, new_cloner_object
+        # Adopt the active mesh as the instance source (C4D-style: select a
+        # cube, hit Add Cloner, it clones — the first click must be visible).
+        src = context.active_object
+        if src is not None and (src.type != "MESH"
+                                or getattr(src, "hmg_type", "") != ""):
+            src = None
         obj = new_cloner_object(context, "HMG Cloner")
         obj.hmg_cloner.mode = self.mode
+        if src is not None:
+            obj.hmg_cloner.instance_object = src
         build_chain(obj)
         return {"FINISHED"}
 

@@ -235,3 +235,14 @@ Built-in proximity falloff FIXED:
   Set Shape (Sphere/Box/Cylinder), Size, Inner — no separate object needed.
 - Verified: SPHERE/BOX/CYLINDER all produce correct gradients.
 - 12/12 tests pass.
+
+## v1.2.20 — 2026-10-20
+
+First-click fix (full-plugin audit):
+- Add Cloner now adopts the active mesh as its instance source — select a
+  cube, hit Add Cloner, clones appear immediately. Before, the first click
+  produced an empty cloner and looked like nothing happened.
+- Audit results: all 6 modes render correctly (visually inspected), all 11
+  effectors produce real changes, live slider sync works without rebuild,
+  parenting/unparenting rebuilds via the handler, save/reload survives,
+  Shader PSR verified working. 12/12 tests pass.
