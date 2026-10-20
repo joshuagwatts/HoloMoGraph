@@ -429,9 +429,19 @@ def build_shader(name, P, falloff_obj):
     tree, gin = h["tree"], h["gin"]
     # NOTE: the image is baked onto the texture node at build time
     # (GeometryNodeImageTexture has no image *input* socket).
+    # Source: 0 Image 1 Noise 2 Voronoi 3 Musgrave 4 Wave 5 Magic
+    #         6 Gradient 7 White Noise  (Blender's built-in textures)
     iface_in(tree, "Image Name", "STRING", default=P.get("image_name", ""))
+    iface_in(tree, "Source", "INT", default=P.get("source", 0), min_value=0, max_value=7,
+             description="0 Image 1 Noise 2 Voronoi 3 Musgrave 4 Wave 5 Magic 6 Gradient 7 WhiteNoise")
     iface_in(tree, "UV Scale", "VECTOR", default=P.get("uv_scale", (0.2, 0.2, 0.2)))
     iface_in(tree, "UV Offset", "VECTOR", default=P.get("uv_offset", (0, 0, 0)))
+    iface_in(tree, "Detail", "FLOAT", default=P.get("tex_detail", 2.0))
+    iface_in(tree, "Roughness", "FLOAT", default=P.get("tex_roughness", 0.5))
+    iface_in(tree, "Distortion", "FLOAT", default=P.get("tex_distortion", 0.0))
+    iface_in(tree, "Anim Speed", "FLOAT", default=P.get("anim_speed", 0.0))
+    iface_in(tree, "Loop", "BOOLEAN", default=P.get("loop", False))
+    iface_in(tree, "Loop Frame", "INT", default=P.get("loop_frame", 60), min_value=1)
     iface_in(tree, "Position Amt", "FLOAT", default=P.get("position_amt", 2.0))
     iface_in(tree, "Scale Amt", "FLOAT", default=P.get("scale_amt", 1.0))
     iface_in(tree, "Use Color", "BOOLEAN", default=P.get("use_color", True))
@@ -441,45 +451,208 @@ def build_shader(name, P, falloff_obj):
         iface_in(tree, pname, stype, default=default)
     w = _apply_falloff(h, falloff_obj, P)
 
+    # ---- sample coordinates ------------------------------------------
     pos = add_node(tree, "GeometryNodeInputPosition", (200, -300))
-    uv = vmath(tree, "ADD",
-               vmath(tree, "MULTIPLY", pos.outputs["Position"], gin.outputs["UV Scale"],
-                     location=(350, -300)).outputs["Vector"],
-               gin.outputs["UV Offset"], location=(500, -300))
-    tex = add_node(tree, "GeometryNodeImageTexture", (650, -300))
-    link(tree, uv.outputs["Vector"], tex.inputs["Vector"])
-    img = bpy.data.images.get(P.get("image_name", ""))
-    if img is not None:
+    base = vmath(tree, "ADD",
+                 vmath(tree, "MULTIPLY", pos.outputs["Position"], gin.outputs["UV Scale"],
+                       location=(350, -300)).outputs["Vector"],
+                 gin.outputs["UV Offset"], location=(500, -300)).outputs["Vector"]
+
+    # ---- animation: coordinate travel + seamless loop crossfade -------
+    stime = add_node(tree, "GeometryNodeInputSceneTime", (200, -620))
+    phase = math(tree, "DIVIDE",
+                 math(tree, "MODULO", stime.outputs["Frame"], gin.outputs["Loop Frame"],
+                      location=(350, -620)).outputs[0],
+                 gin.outputs["Loop Frame"], location=(500, -620)).outputs[0]
+    travel = switch(tree, gin.outputs["Loop"],
+                    math(tree, "MULTIPLY", stime.outputs["Seconds"],
+                         gin.outputs["Anim Speed"], location=(500, -700)).outputs[0],
+                    math(tree, "MULTIPLY", phase, gin.outputs["Anim Speed"],
+                         location=(500, -560)).outputs[0],
+                    location=(650, -620)).outputs[0]
+    dirv = combine_xyz(tree, value(tree, 0.577, (650, -760)).outputs[0],
+                       value(tree, 0.577, (650, -800)).outputs[0],
+                       value(tree, 0.577, (650, -840)).outputs[0],
+                       (800, -800)).outputs["Vector"]
+    coord_a = vmath(tree, "ADD", base,
+                    vmath(tree, "MULTIPLY", dirv, _to_vec(tree, travel, (800, -620)),
+                          location=(950, -620)).outputs["Vector"],
+                    location=(1100, -450)).outputs["Vector"]
+    coord_b = vmath(tree, "ADD", base,
+                    vmath(tree, "MULTIPLY", dirv,
+                          _to_vec(tree,
+                                  math(tree, "SUBTRACT", travel, gin.outputs["Anim Speed"],
+                                       location=(950, -760)).outputs[0], (950, -720)),
+                          location=(1100, -760)).outputs["Vector"],
+                    location=(1250, -760)).outputs["Vector"]
+    mixf = switch(tree, gin.outputs["Loop"], value(tree, 0.0, (650, -900)).outputs[0],
+                  phase, location=(800, -900)).outputs[0]
+
+    def _tin(node, sock, iname):
         try:
-            tex.image = img
+            link(tree, sock, node.inputs[iname])
         except Exception:
             pass
-    col = tex.outputs["Color"]
-    sep = separate_xyz(tree, col, (800, -300))
-    lum = math(tree, "ADD", math(tree, "ADD", sep.outputs["X"], sep.outputs["Y"],
-                                 location=(950, -250)).outputs[0], sep.outputs["Z"],
-               location=(1100, -250)).outputs[0]
-    lum = math(tree, "DIVIDE", lum, value(tree, 3.0).outputs[0],
-               location=(1250, -250)).outputs[0]
+
+    def _tset(node, iname, val):
+        try:
+            node.inputs[iname].default_value = val
+        except Exception:
+            pass
+
+    def _tout(node, *names):
+        for nm in names:
+            try:
+                return node.outputs[nm]
+            except Exception:
+                continue
+        return None
+
+    def _lum(col_sock, loc):
+        sep = separate_xyz(tree, col_sock, loc)
+        s = math(tree, "ADD",
+                 math(tree, "ADD", sep.outputs["X"], sep.outputs["Y"],
+                      location=(loc[0] + 150, loc[1])).outputs[0],
+                 sep.outputs["Z"], location=(loc[0] + 300, loc[1])).outputs[0]
+        return math(tree, "DIVIDE", s, value(tree, 3.0, (loc[0] + 300, loc[1] - 40)).outputs[0],
+                    location=(loc[0] + 450, loc[1])).outputs[0]
+
+    def _gray(v_sock, loc):
+        return combine_xyz(tree, v_sock, v_sock, v_sock, loc).outputs["Vector"]
+
+    def _sample(coord, ox, oy):
+        """Build all 8 sources at `coord`; return (color, value) sockets."""
+        cols, vals = [], []
+        # 0 Image
+        tex = add_node(tree, "GeometryNodeImageTexture", (ox, oy))
+        _tin(tex, coord, "Vector")
+        img = bpy.data.images.get(P.get("image_name", ""))
+        if img is not None:
+            # Blender 5.x: the image is an INPUT socket, not a node property
+            # (the old tex.image assignment silently failed -> black samples).
+            try:
+                tex.inputs["Image"].default_value = img
+            except Exception:
+                try:
+                    tex.image = img
+                except Exception:
+                    pass
+        c = tex.outputs["Color"]
+        cols.append(c); vals.append(_lum(c, (ox + 200, oy)))
+        # 1 Noise
+        nz = add_node(tree, "ShaderNodeTexNoise", (ox, oy - 220))
+        _tin(nz, coord, "Vector")
+        _tset(nz, "Scale", 1.0)
+        _tin(nz, gin.outputs["Detail"], "Detail")
+        _tin(nz, gin.outputs["Roughness"], "Roughness")
+        _tin(nz, gin.outputs["Distortion"], "Distortion")
+        c = nz.outputs["Color"]
+        cols.append(c); vals.append(_tout(nz, "Factor", "Fac") or _lum(c, (ox + 200, oy - 220)))
+        # 2 Voronoi
+        vo = add_node(tree, "ShaderNodeTexVoronoi", (ox, oy - 440))
+        _tin(vo, coord, "Vector")
+        _tset(vo, "Scale", 1.0)
+        c = _tout(vo, "Color")
+        d = _tout(vo, "Distance")
+        if d is not None:
+            vals.append(math(tree, "MINIMUM",
+                             math(tree, "MULTIPLY", d, value(tree, 0.5, (ox + 200, oy - 480)).outputs[0],
+                                  location=(ox + 350, oy - 440)).outputs[0],
+                             value(tree, 1.0, (ox + 350, oy - 480)).outputs[0],
+                             location=(ox + 500, oy - 440)).outputs[0])
+        else:
+            vals.append(_lum(c, (ox + 200, oy - 440)))
+        cols.append(c if c is not None else _gray(vals[-1], (ox + 200, oy - 520)))
+        # 3 Musgrave (Blender 5.0 merged it into Noise as the FBM type)
+        mu = add_node(tree, "ShaderNodeTexNoise", (ox, oy - 660))
+        try:
+            mu.noise_type = "RIDGED_MULTIFRACTAL"
+        except Exception:
+            pass
+        _tin(mu, coord, "Vector")
+        _tset(mu, "Scale", 1.0)
+        _tin(mu, gin.outputs["Detail"], "Detail")
+        hv = _tout(mu, "Height", "Factor", "Fac")
+        # Ridged-multifractal values hug zero; sqrt lift so it reads like
+        # the other sources at the same settings.
+        hv = math(tree, "POWER", hv, value(tree, 0.5, (ox + 200, oy - 620)).outputs[0],
+                  location=(ox + 350, oy - 660)).outputs[0]
+        cols.append(_tout(mu, "Color") or _gray(hv, (ox + 200, oy - 660)))
+        vals.append(hv)
+        # 4 Wave
+        wv = add_node(tree, "ShaderNodeTexWave", (ox, oy - 880))
+        try:
+            wv.wave_type = "BANDS"
+        except Exception:
+            pass
+        _tin(wv, coord, "Vector")
+        _tset(wv, "Scale", 1.0)
+        _tin(wv, gin.outputs["Distortion"], "Distortion")
+        _tin(wv, gin.outputs["Detail"], "Detail")
+        c = wv.outputs["Color"]
+        cols.append(c); vals.append(_tout(wv, "Factor", "Fac") or _lum(c, (ox + 200, oy - 880)))
+        # 5 Magic
+        mg = add_node(tree, "ShaderNodeTexMagic", (ox, oy - 1100))
+        _tin(mg, coord, "Vector")
+        _tset(mg, "Scale", 1.0)
+        # Magic's natural Distortion default is 1.0 (0 collapses its pattern),
+        # so the shared slider is offset by +1 for this source.
+        _tin(mg, math(tree, "ADD", gin.outputs["Distortion"],
+                      value(tree, 1.0, (ox - 150, oy - 1100)).outputs[0],
+                      location=(ox - 50, oy - 1100)).outputs[0], "Distortion")
+        c = mg.outputs["Color"]
+        cols.append(c); vals.append(_tout(mg, "Factor", "Fac") or _lum(c, (ox + 200, oy - 1100)))
+        # 6 Gradient (spherical)
+        gr = add_node(tree, "ShaderNodeTexGradient", (ox, oy - 1320))
+        try:
+            gr.gradient_type = "SPHERICAL"
+        except Exception:
+            pass
+        _tin(gr, coord, "Vector")
+        c = gr.outputs["Color"]
+        cols.append(c); vals.append(_tout(gr, "Factor", "Fac") or _lum(c, (ox + 200, oy - 1320)))
+        # 7 White Noise
+        wn = add_node(tree, "ShaderNodeTexWhiteNoise", (ox, oy - 1540))
+        _tin(wn, coord, "Vector")
+        v7 = wn.outputs["Value"]
+        cols.append(_tout(wn, "Color") or _gray(v7, (ox + 200, oy - 1540)))
+        vals.append(v7)
+        col = index_switch(tree, gin.outputs["Source"], cols,
+                           location=(ox + 2200, oy - 700), data_type="RGBA").outputs[0]
+        val = index_switch(tree, gin.outputs["Source"], vals,
+                           location=(ox + 2200, oy - 900), data_type="FLOAT").outputs[0]
+        return col, val
+
+    col_a, val_a = _sample(coord_a, 1400, -200)
+    col_b, val_b = _sample(coord_b, 1400, -2100)
+    # crossfade (mixf = 0 unless looping)
+    mixc = add_node(tree, "ShaderNodeMix", (5900, -500))
+    mixc.data_type = "RGBA"
+    link(tree, mixf, mixc.inputs["Factor"])
+    link(tree, col_a, mixc.inputs["A"])
+    link(tree, col_b, mixc.inputs["B"])
+    col = mixc.outputs["Result"]
+    lum = mix_float(tree, mixf, val_a, val_b, location=(5900, -800)).outputs[0]
+
     P_off = vmath(tree, "MULTIPLY",
-                  vmath(tree, "SUBTRACT", _to_vec(tree, lum, (1250, -400)),
-                        _to_vec(tree, value(tree, 0.5).outputs[0], (1250, -460)),
-                        location=(1400, -400)).outputs["Vector"],
+                  vmath(tree, "SUBTRACT", _to_vec(tree, lum, (6050, -400)),
+                        _to_vec(tree, value(tree, 0.5).outputs[0], (6050, -460)),
+                        location=(6200, -400)).outputs["Vector"],
                   _to_vec(tree, math(tree, "MULTIPLY", gin.outputs["Position Amt"],
                                      value(tree, 2.0).outputs[0]).outputs[0],
-                          (1400, -520)), location=(1550, -400)).outputs["Vector"]
+                          (6200, -520)), location=(6350, -400)).outputs["Vector"]
     one_v = combine_xyz(tree, value(tree, 1.0).outputs[0], value(tree, 1.0).outputs[0],
                         value(tree, 1.0).outputs[0]).outputs["Vector"]
     S_fac = vmath(tree, "ADD", one_v,
                   vmath(tree, "MULTIPLY",
                         _to_vec(tree, math(tree, "SUBTRACT", lum,
                                            value(tree, 0.5).outputs[0]).outputs[0],
-                                (1400, -650)),
-                        _to_vec(tree, gin.outputs["Scale Amt"], (1400, -710)),
-                        location=(1550, -650)).outputs["Vector"],
-                  location=(1700, -650)).outputs["Vector"]
+                                (6200, -650)),
+                        _to_vec(tree, gin.outputs["Scale Amt"], (6200, -710)),
+                        location=(6350, -650)).outputs["Vector"],
+                  location=(6500, -650)).outputs["Vector"]
     C = switch(tree, gin.outputs["Use Color"], one_v, col, input_type="RGBA",
-               location=(1700, -800)).outputs[0]
+               location=(6500, -800)).outputs[0]
     _apply_transforms(h, w, P_off, None, S_fac, C, None, None)
     _add_user_psr(h, w, P, gin)
     return _finish(h, w)

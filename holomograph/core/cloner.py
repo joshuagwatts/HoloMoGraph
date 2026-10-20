@@ -446,7 +446,12 @@ def _fx_params(eff) -> dict:
                  scale=tuple(p.scale))
     elif t == "SHADER":
         d.update(image_name=p.image.name if p.image else "",
+                 source=["IMAGE", "NOISE", "VORONOI", "MUSGRAVE", "WAVE",
+                         "MAGIC", "GRADIENT", "WHITE_NOISE"].index(p.shader_source),
                  uv_scale=tuple(p.uv_scale), uv_offset=tuple(p.uv_offset),
+                 tex_detail=p.tex_detail, tex_roughness=p.tex_roughness,
+                 tex_distortion=p.tex_distortion, anim_speed=p.anim_speed,
+                 loop=p.loop, loop_frame=p.loop_frame,
                  position_amt=p.shader_pos_amt, scale_amt=p.shader_scl_amt,
                  use_color=p.shader_use_color,
                  position=tuple(p.position), rotation=tuple(p.rotation),
@@ -728,6 +733,12 @@ def _append_pipeline(tree, cloner_obj, x):
         fn.inputs["Strength"].default_value = ep.strength
         link(tree, count, fn.inputs["Count"])
         fn.inputs["Weight Attr"].default_value = f"hmg_w_{sanitize(eff.name)}"
+        # Rename-proof handle for live sync (names change; this doesn't).
+        try:
+            eff["hmg_fx_group"] = fxg.name
+            eff["hmg_fx_node"] = fn.name
+        except Exception:
+            pass
         _set_fx_params(fn, eff, fo)
         drv_items.append((eff, "hmg_effector.strength", fn, "Strength"))
         # per-type driver mirrors for the headline params
@@ -753,7 +764,10 @@ def _fx_driver_map(eff_type):
                  ("loop", "Loop"), ("loop_frame", "Loop Frame"),
                  ("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
     if eff_type == "SHADER":
-        base += [("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
+        base += [("tex_detail", "Detail"), ("tex_roughness", "Roughness"),
+                 ("tex_distortion", "Distortion"), ("anim_speed", "Anim Speed"),
+                 ("loop", "Loop"), ("loop_frame", "Loop Frame"),
+                 ("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
     if eff_type == "DELAY":
         base += [("delay", "Delay"), ("stiffness", "Stiffness"), ("damping", "Damping"),
                  ("position", "Position"), ("rotation", "Rotation"), ("scale", "Scale")]
@@ -841,7 +855,12 @@ def _set_fx_params(fn, eff, fo):
         put("Scale", tuple(ep.scale))
     if t == "SHADER":
         put("Image Name", ep.image.name if ep.image else "")
+        put("Source", ["IMAGE", "NOISE", "VORONOI", "MUSGRAVE", "WAVE",
+                       "MAGIC", "GRADIENT", "WHITE_NOISE"].index(ep.shader_source))
         put("UV Scale", tuple(ep.uv_scale)); put("UV Offset", tuple(ep.uv_offset))
+        put("Detail", ep.tex_detail); put("Roughness", ep.tex_roughness)
+        put("Distortion", ep.tex_distortion); put("Anim Speed", ep.anim_speed)
+        put("Loop", ep.loop); put("Loop Frame", ep.loop_frame)
         put("Position Amt", ep.shader_pos_amt); put("Scale Amt", ep.shader_scl_amt)
         put("Position", tuple(ep.position)); put("Rotation", tuple(ep.rotation))
         put("Scale", tuple(ep.scale))
@@ -1206,13 +1225,18 @@ def _sync_effector_node(cloner_obj, eff_obj):
         return
     tree = mod.node_group
     ep = eff_obj.hmg_effector
-    # Find the FX group node for this effector
+    # Find the FX group node for this effector: stamped node name first
+    # (survives renames), legacy name match as fallback for old scenes.
     target = None
-    for node in tree.nodes:
-        if node.bl_idname == "GeometryNodeGroup" and node.node_tree:
-            if sanitize(eff_obj.name) in node.node_tree.name:
-                target = node
-                break
+    stamped = eff_obj.get("hmg_fx_node") if hasattr(eff_obj, "get") else None
+    if stamped:
+        target = tree.nodes.get(stamped)
+    if target is None:
+        for node in tree.nodes:
+            if node.bl_idname == "GeometryNodeGroup" and node.node_tree:
+                if sanitize(eff_obj.name) in node.node_tree.name:
+                    target = node
+                    break
     if target is None:
         return
     # Reuse the same param-setting logic as the initial build.

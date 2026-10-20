@@ -210,12 +210,24 @@ class HMG_PT_effector(bpy.types.Panel):
             box.prop(ep, "rotation")
             box.prop(ep, "scale")
         if t == "SHADER":
-            box.prop(ep, "image")
+            box.prop(ep, "shader_source")
+            if ep.shader_source == "IMAGE":
+                box.prop(ep, "image")
+            else:
+                box.prop(ep, "tex_detail")
+                box.prop(ep, "tex_roughness")
+                box.prop(ep, "tex_distortion")
             box.prop(ep, "uv_scale")
             box.prop(ep, "uv_offset")
             box.prop(ep, "shader_pos_amt")
             box.prop(ep, "shader_scl_amt")
             box.prop(ep, "shader_use_color")
+            box.separator()
+            box.label(text="Animation:")
+            box.prop(ep, "anim_speed")
+            box.prop(ep, "loop")
+            if ep.loop:
+                box.prop(ep, "loop_frame")
             box.separator()
             box.label(text="Transform:")
             box.prop(ep, "position")

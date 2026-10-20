@@ -219,6 +219,21 @@ class HMG_EffectorProps(bpy.types.PropertyGroup):
     shader_pos_amt: bpy.props.FloatProperty(name="Position Amount", default=2.0, update=_upd)
     shader_scl_amt: bpy.props.FloatProperty(name="Scale Amount", default=1.0, update=_upd)
     shader_use_color: bpy.props.BoolProperty(name="Use as Color", default=True, update=_upd)
+    shader_source: bpy.props.EnumProperty(name="Source",
+        items=[("IMAGE", "Image", "Sample an image texture"),
+               ("NOISE", "Noise", "Blender Noise texture"),
+               ("VORONOI", "Voronoi", "Blender Voronoi texture"),
+               ("MUSGRAVE", "Musgrave", "Blender Musgrave texture"),
+               ("WAVE", "Wave", "Blender Wave texture"),
+               ("MAGIC", "Magic", "Blender Magic texture"),
+               ("GRADIENT", "Gradient", "Spherical gradient from center"),
+               ("WHITE_NOISE", "White Noise", "Random per-point values")],
+        default="IMAGE", update=_upd)
+    tex_detail: bpy.props.FloatProperty(name="Detail", default=2.0, min=0.0, max=15.0, update=_upd)
+    tex_roughness: bpy.props.FloatProperty(name="Roughness", default=0.5, min=0.0, max=1.0, update=_upd)
+    tex_distortion: bpy.props.FloatProperty(name="Distortion", default=0.0, update=_upd)
+    anim_speed: bpy.props.FloatProperty(name="Anim Speed", default=0.0, update=_upd,
+        description="How fast the texture scrolls/evolves over time (0 = static)")
     # delay
     delay: bpy.props.FloatProperty(name="Delay", default=10.0, min=0.0, update=_upd)
     stiffness: bpy.props.FloatProperty(name="Stiffness", default=1.5,
