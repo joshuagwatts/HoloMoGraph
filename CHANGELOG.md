@@ -246,3 +246,24 @@ First-click fix (full-plugin audit):
   effectors produce real changes, live slider sync works without rebuild,
   parenting/unparenting rebuilds via the handler, save/reload survives,
   Shader PSR verified working. 12/12 tests pass.
+
+## v1.2.21 — 2026-10-20
+
+- Shader effector: Source selector with Blender's built-in textures
+  (Noise / Voronoi / Musgrave / Wave / Magic / Gradient / White Noise) plus
+  Image; Detail / Roughness / Distortion, Anim Speed, seamless Loop.
+  Fixed image sampling on Blender 5.x (image is an input socket there, the
+  old property write silently sampled black) and effector-rename breaking
+  live slider sync. Core 12/12 + prove-out suite on Blender 5.0.1 and 5.2.2.
+
+## v1.2.22 — 2026-10-21
+
+- **Radial Arc fixed.** Dragging the Arc slider collapsed the ring to a
+  ~3° wedge: the property was declared as an ANGLE (Blender stores radians)
+  while the Radial node chain expects degrees. Arc is now plain degrees
+  end-to-end — set 180°, you get a 180° arc.
+- Tradeoffs: the slider is a plain degrees number (no ° angle widget), and a
+  .blend saved in v1.2.21 where Arc had been dragged holds a radian value
+  that now reads as a tiny degree value — just re-set Arc in those files.
+- Regression: the prove-out suite now sets Arc through the property (the way
+  the UI does) and measures the clone spread for 90° / 180° / default 360°.

@@ -85,7 +85,7 @@ class HMG_ClonerProps(bpy.types.PropertyGroup):
     # radial
     radius: bpy.props.FloatProperty(name="Radius", default=5.0, min=0.01, update=_upd)
     arc: bpy.props.FloatProperty(name="Arc", default=360.0, min=0.0, max=360.0,
-                                 subtype="ANGLE", unit="ROTATION", update=_upd)
+                                 update=_upd)
     plane: bpy.props.EnumProperty(name="Plane",
                                   items=[("XY", "XY", ""), ("XZ", "XZ", ""), ("YZ", "YZ", "")],
                                   default="XZ", update=_upd)

@@ -139,4 +139,39 @@ try:
     print(f"T8 duplicated cloner: total instances of cube={n} {'OK' if n == 10 else 'BROKEN'}")
 except Exception as e:
     print(f"T8 EXCEPTION {type(e).__name__}: {str(e)[:100]}")
+# T9: Radial Arc set the way the UI sets it (plain degrees via the property).
+# Regression for v1.2.21: arc was an ANGLE property (stored radians) while the
+# node chain expects degrees — dragging the panel slider collapsed the ring.
+try:
+    import math as _math
+    def radial_span(arc_val):
+        clean()
+        bpy.ops.mesh.primitive_cube_add(size=1.0); cube = bpy.context.active_object
+        cl = new_cloner_object(bpy.context, "C")
+        cp = cl.hmg_cloner
+        cp.instance_object = cube; cp.mode = "RADIAL"
+        cp.count = 8; cp.radius = 5.0; cp.plane = "XZ"
+        if arc_val is not None:
+            cp.arc = arc_val          # plain degrees, exactly what the panel writes now
+        build_chain(cl)
+        bpy.context.view_layer.update()
+        deps = bpy.context.evaluated_depsgraph_get(); deps.update()
+        angs = sorted(_math.degrees(_math.atan2(i.matrix_world.translation.z,
+                                                i.matrix_world.translation.x)) % 360.0
+                      for i in deps.object_instances
+                      if i.is_instance and i.object is not None and i.object.original == cube)
+        return angs
+    cases = [(180.0, 180.0), (90.0, 90.0), (None, 315.0)]
+    ok = True
+    for arc_val, want in cases:
+        angs = radial_span(arc_val)
+        span = angs[-1] - angs[0] if len(angs) == 8 else -1
+        label = "default" if arc_val is None else str(arc_val)
+        good = len(angs) == 8 and abs(span - want) < 1.5
+        ok = ok and good
+        print(f"  arc={label}: n={len(angs)} span={span:.1f} want~{want} {'OK' if good else 'BAD'}")
+    print(f"T9 radial arc via property (degrees): {'OK' if ok else 'BROKEN'}")
+except Exception as e:
+    print(f"T9 EXCEPTION {type(e).__name__}: {str(e)[:100]}")
+
 print("TORTURE DONE")
